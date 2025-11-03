@@ -1,0 +1,103 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/server/prisma';
+import { uploadImageFromFormData } from '@/server/upload';
+import { verifyAuth } from '@/server/auth';
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const ownerId = searchParams.get('ownerId') || undefined;
+  const search = searchParams.get('search') || undefined;
+  const categoryParam = searchParams.get('category') || undefined;
+  const type = searchParams.get('type') || undefined;
+  const status = searchParams.get('status') || undefined;
+  const neLat = parseFloat(searchParams.get('neLat') || '');
+  const neLng = parseFloat(searchParams.get('neLng') || '');
+  const swLat = parseFloat(searchParams.get('swLat') || '');
+  const swLng = parseFloat(searchParams.get('swLng') || '');
+
+  const where: any = {};
+  if (ownerId) where.ownerId = ownerId;
+  if (type) where.type = type;
+  if (status) where.status = status;
+  if (search) where.name = { contains: search, mode: 'insensitive' };
+  if (categoryParam) {
+    const categories = String(categoryParam).split(',').map((s) => s.trim()).filter(Boolean);
+    if (categories.length > 0) {
+      where.OR = categories.map((c) => ({ category: { contains: c, mode: 'insensitive' } }));
+    }
+  }
+  if ([neLat, neLng, swLat, swLng].every((n) => !Number.isNaN(n))) {
+    where.AND = [
+      { latitude: { gte: swLat } },
+      { latitude: { lte: neLat } },
+      { longitude: { gte: swLng } },
+      { longitude: { lte: neLng } },
+    ];
+  }
+
+  const things = await prisma.thing.findMany({ where, orderBy: { createdAt: 'desc' } });
+  return NextResponse.json({ things, message: 'Fetching things successful' });
+}
+
+export async function POST(req: NextRequest) {
+  const auth = verifyAuth(req as unknown as Request);
+  if (!auth) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+  const form = await req.formData();
+  const name = form.get('name') as string | null;
+  // Ignore ownerId/ownerImageUrl from client; derive from token/user
+  const category = form.get('category') as string | null;
+  const type = form.get('type') as string | null;
+  const price = form.get('price') as string | null;
+  const currencySymbol = form.get('currencySymbol') as string | null;
+  const latitude = form.get('latitude') as string | null;
+  const longitude = form.get('longitude') as string | null;
+  const country = form.get('country') as string | null;
+  const city = form.get('city') as string | null;
+  const start = form.get('start') as string | null;
+  const end = form.get('end') as string | null;
+  const priceRange = form.get('priceRange') as string | null;
+
+  if (!name || !type || !latitude || !longitude) {
+    return NextResponse.json({ message: 'mandatory params : name,type,latitude,longitude' }, { status: 400 });
+  }
+
+  let imageUrl: string | undefined = undefined;
+  try {
+    const uploaded = await uploadImageFromFormData(form as unknown as FormData, 'thingImage', process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
+    if (uploaded) imageUrl = uploaded;
+  } catch (_) {}
+
+  // Optionally fetch user to set owner avatar
+  let ownerImageUrl: string | undefined = undefined;
+  try {
+    const owner = await prisma.user.findUnique({ where: { id: auth.userId } });
+    if (owner?.userAvatar) ownerImageUrl = owner.userAvatar;
+  } catch {}
+
+  const thing = await prisma.thing.create({
+    data: {
+      name,
+      ownerId: auth.userId,
+      ownerImageUrl: ownerImageUrl ?? undefined,
+      imageUrl,
+      type: type ?? undefined,
+      category: category ?? undefined,
+      latitude: latitude ? Number(latitude) : undefined,
+      longitude: longitude ? Number(longitude) : undefined,
+      city: city ?? undefined,
+      country: country ?? undefined,
+      status: 'available',
+      start: type === 'event' ? start ?? undefined : undefined,
+      end: type === 'event' ? end ?? undefined : undefined,
+      priceRange: type === 'store' ? (priceRange ? Number(priceRange) : undefined) : undefined,
+      price: type !== 'store' ? (price ? Number(price) : undefined) : undefined,
+      currencySymbol: type !== 'store' ? (currencySymbol ?? undefined) : undefined,
+      fromGoogle: false,
+    },
+  });
+
+  return NextResponse.json({ thing }, { status: 201 });
+}
+

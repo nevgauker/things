@@ -1,0 +1,57 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String?
+  name              String?
+  userAvatar        String?
+  isAdmin           Boolean  @default(false)
+  pushToken         String?
+  phoneNumber       String?
+  dialCode          String?
+  isoCode           String?
+  sms               Boolean?
+  whatsapp          Boolean?
+  telegram          Boolean?
+  preferredCurrency String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  things            Thing[]
+}
+
+model Thing {
+  id              String   @id @default(cuid())
+  name            String?
+  type            String?
+  category        String?
+  ownerId         String?
+  owner           User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  ownerImageUrl   String?
+  imageUrl        String?
+  price           Float?
+  currencySymbol  String?
+  country         String?
+  city            String?
+  status          String?
+  start           String?
+  end             String?
+  priceRange      Float?
+  latitude        Float?
+  longitude       Float?
+  fromGoogle      Boolean  @default(false)
+  googleData      Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([latitude, longitude])
+}
