@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "build": "node -e \"if(process.env.VERCEL_ENV==='production'){require('child_process').execSync('prisma migrate deploy',{stdio:'inherit'})}\" && next build",
+    "build": "next build",
     "start": "next start",
     "type-check": "tsc --noEmit",
     "prisma:generate": "prisma generate",
