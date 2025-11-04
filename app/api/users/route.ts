@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { z } from 'zod';
+import { z } from '@/server/validate';
 import { rateLimit } from '@/server/rateLimit';
 import { prisma } from '@/server/prisma';
 import { uploadImageFromFormData } from '@/server/upload';

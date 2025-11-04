@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/prisma';
 import { uploadImageFromFormData } from '@/server/upload';
 import { verifyAuth } from '@/server/auth';
-import { z } from 'zod';
+import { z } from '@/server/validate';
 import { rateLimit } from '@/server/rateLimit';
 
 export async function GET(req: NextRequest) {
@@ -96,27 +96,26 @@ export async function POST(req: NextRequest) {
     if (owner?.userAvatar) ownerImageUrl = owner.userAvatar;
   } catch {}
 
-  const thing = await prisma.thing.create({
-    data: {
-      name,
-      ownerId: auth.userId,
-      ownerImageUrl: ownerImageUrl ?? undefined,
-      imageUrl,
-      type: type ?? undefined,
-      category: category ?? undefined,
-      latitude: latitude ? Number(latitude) : undefined,
-      longitude: longitude ? Number(longitude) : undefined,
-      city: city ?? undefined,
-      country: country ?? undefined,
-      status: 'available',
-      start: type === 'event' ? start ?? undefined : undefined,
-      end: type === 'event' ? end ?? undefined : undefined,
-      priceRange: type === 'store' ? (priceRange ? Number(priceRange) : undefined) : undefined,
-      price: type !== 'store' ? (price ? Number(price) : undefined) : undefined,
-      currencyCode: type !== 'store' ? (currencyCode ? String(currencyCode).toUpperCase() : undefined) : undefined,
-      fromGoogle: false,
-    },
-  });
+  const createData: any = {
+    name,
+    ownerId: auth.userId,
+    ownerImageUrl: ownerImageUrl ?? undefined,
+    imageUrl,
+    type: type ?? undefined,
+    category: category ?? undefined,
+    latitude: latitude ? Number(latitude) : undefined,
+    longitude: longitude ? Number(longitude) : undefined,
+    city: city ?? undefined,
+    country: country ?? undefined,
+    status: 'available',
+    start: type === 'event' ? start ?? undefined : undefined,
+    end: type === 'event' ? end ?? undefined : undefined,
+    priceRange: type === 'store' ? (priceRange ? Number(priceRange) : undefined) : undefined,
+    price: type !== 'store' ? (price ? Number(price) : undefined) : undefined,
+    currencyCode: type !== 'store' ? (currencyCode ? String(currencyCode).toUpperCase() : undefined) : undefined,
+    fromGoogle: false,
+  };
+  const thing = await prisma.thing.create({ data: createData });
 
   return NextResponse.json({ thing }, { status: 201 });
 }

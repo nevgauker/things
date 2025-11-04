@@ -82,6 +82,7 @@ export default function MapView({
 
   useEffect(() => {
     let listener: any;
+    let debounceTimer: any;
     loadGoogleMaps()
       .then(() => {
         if (!ref.current) return;
@@ -97,14 +98,18 @@ export default function MapView({
 
         const emitBounds = () => {
           try {
-            const bounds = mapRef.current?.getBounds?.();
-            if (!bounds || !onBoundsChanged) return;
-            const ne = bounds.getNorthEast();
-            const sw = bounds.getSouthWest();
-            onBoundsChanged({
-              northeast: { lat: ne.lat(), lng: ne.lng() },
-              southwest: { lat: sw.lat(), lng: sw.lng() },
-            });
+            if (!onBoundsChanged) return;
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+              const bounds = mapRef.current?.getBounds?.();
+              if (!bounds) return;
+              const ne = bounds.getNorthEast();
+              const sw = bounds.getSouthWest();
+              onBoundsChanged({
+                northeast: { lat: ne.lat(), lng: ne.lng() },
+                southwest: { lat: sw.lat(), lng: sw.lng() },
+              });
+            }, 150);
           } catch {}
         };
         listener = window.google.maps.event.addListenerOnce(mapRef.current, 'idle', emitBounds);
@@ -144,6 +149,7 @@ export default function MapView({
       if (listener && window.google?.maps?.event?.removeListener) {
         window.google.maps.event.removeListener(listener);
       }
+      if (debounceTimer) clearTimeout(debounceTimer);
       try { userMarkerRef.current?.setMap(null); } catch {}
     };
   }, [onBoundsChanged, showUserLocation]);

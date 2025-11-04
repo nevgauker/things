@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/server/prisma';
 import { uploadImageFromFormData } from '@/server/upload';
 import { verifyAuth } from '@/server/auth';
-import { z } from 'zod';
+import { z } from '@/server/validate';
 import { rateLimit } from '@/server/rateLimit';
 
 export async function GET(_: Request, context: any) {

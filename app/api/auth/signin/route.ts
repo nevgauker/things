@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { rateLimit } from '@/server/rateLimit';
-import { z } from 'zod';
+import { z } from '@/server/validate';
 import { prisma } from '@/server/prisma';
 
 export async function POST(req: NextRequest) {
