@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import type { Bounds, Thing } from '@/lib/api/types';
+import { categories } from '@/lib/api/types';
 import { loadGoogleMaps } from '@/lib/maps/google';
 
 declare global { var google: any; }
@@ -59,10 +60,8 @@ export default function MapView({
 
   function markerIconForCategory(category?: string) {
     const c = String(category || 'other').toLowerCase();
-    const known = [
-      'gadgets','fashion','art','travel','food','entertainment','garden','household','pets','hobbies','office','cars','other'
-    ];
-    const file = known.includes(c) ? c : 'other';
+    const known = new Set(categories.map((k) => k.name));
+    const file = known.has(c) ? c : 'other';
     const url = `/categories/${file}.png`;
     return {
       url,
@@ -254,21 +253,15 @@ export default function MapView({
     <div className={`relative h-80 w-full overflow-hidden rounded-lg border ${className}`}>
       <div ref={ref} className="absolute inset-0" />
       {showLegend && (
-        <div className="absolute left-3 top-3 z-10 rounded-lg border bg-white/90 p-2 shadow">
+        <div className="absolute left-3 top-3 z-10 max-h-56 overflow-auto rounded-lg border bg-white/90 p-2 shadow">
           <div className="mb-1 text-xs font-semibold text-gray-600">Categories</div>
-          <div className="flex flex-col gap-1 text-xs text-gray-700">
-            <div className="flex items-center gap-2">
-              <Image src="/categories/gadgets.png" alt="Gadgets" width={16} height={16} />
-              <span>Gadgets</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Image src="/categories/food.png" alt="Food" width={16} height={16} />
-              <span>Food</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Image src="/categories/travel.png" alt="Travel" width={16} height={16} />
-              <span>Travel</span>
-            </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-700">
+            {categories.map((c) => (
+              <div key={c.id} className="flex items-center gap-2">
+                <Image src={`/categories/${c.name}.png`} alt={c.displayName} width={16} height={16} />
+                <span>{c.displayName}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
