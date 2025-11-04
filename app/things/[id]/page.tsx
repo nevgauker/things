@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import MapView from '@/components/MapView';
 import ThingOwnerSection from '@/components/ThingOwnerSection';
 import ThingActions from '@/components/ThingActions';
@@ -72,8 +73,13 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
         {/* Left: Cover image */}
         <div className="overflow-hidden rounded-lg border bg-white">
           <div className="relative h-64 w-full bg-gray-100 md:h-80">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={thing.imageUrl || '/placeholder.png'} alt={thing.name || 'Thing'} className="h-full w-full object-cover" />
+            <Image
+              src={thing.imageUrl || '/placeholder.png'}
+              alt={thing.name || 'Thing'}
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
+            />
           </div>
         </div>
 

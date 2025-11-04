@@ -1,15 +1,17 @@
 import type { Thing } from '@/lib/api/types';
+import Image from 'next/image';
 
 export default function ThingCard({ thing }: { thing: Thing }) {
   return (
     <article className="card overflow-hidden">
       <div className="relative h-40 w-full bg-gray-100">
-        {// eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={thing.imageUrl || '/placeholder.png'}
           alt={thing.name ?? 'Thing'}
-          className="h-full w-full object-cover"
-        />}
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          className="object-cover"
+        />
       </div>
       <div className="space-y-1 p-4">
         <h3 className="truncate text-base font-semibold" title={thing.name}>{thing.name}</h3>

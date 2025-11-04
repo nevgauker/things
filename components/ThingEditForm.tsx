@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { categories } from '@/lib/api/types';
 import LocationPickerMap from '@/components/LocationPickerMap';
@@ -80,11 +81,13 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
       {/* Preview */}
       <div className="overflow-hidden rounded-lg border bg-white">
         <div className="relative h-40 w-full bg-gray-100">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={previewUrl || '/placeholder.png'}
             alt={name || 'Thing image'}
-            className="h-full w-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover"
+            unoptimized
           />
         </div>
       </div>
@@ -96,7 +99,7 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
         <div>
           <label className="mb-1 block text-sm font-medium">Type</label>
           <div className="flex items-center gap-2">
-            <img src={`/thingsType/${type || 'thing'}.png`} alt="" className="h-5 w-5" />
+            <Image src={`/thingsType/${type || 'thing'}.png`} alt="Type icon" width={20} height={20} />
             <select className="w-full rounded border px-3 py-2" value={type} onChange={(e)=>setType(e.target.value)}>
               <option value="thing">Thing</option>
               <option value="store">Store</option>
@@ -108,15 +111,15 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
           <label className="mb-1 block text-sm font-medium">Category</label>
           <div className="flex items-center gap-2">
             {category ? (
-              <img src={`/categories/${category}.png`} alt="" className="h-5 w-5" />
+              <Image src={`/categories/${category}.png`} alt="Category icon" width={20} height={20} />
             ) : (
-              <img src={'/categories/other.png'} alt="" className="h-5 w-5 opacity-60" />
+              <Image src={'/categories/other.png'} alt="No category" width={20} height={20} className="opacity-60" />
             )}
             <select className="w-full rounded border px-3 py-2" value={category} onChange={(e)=>setCategory(e.target.value)}>
-            <option value="">Select a category</option>
-            {categories.map((c)=> (
-              <option key={c.id} value={c.name}>{c.displayName}</option>
-            ))}
+              <option value="">Select a category</option>
+              {categories.map((c)=> (
+                <option key={c.id} value={c.name}>{c.displayName}</option>
+              ))}
             </select>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 import type { Bounds, Thing } from '@/lib/api/types';
 import { loadGoogleMaps } from '@/lib/maps/google';
 
@@ -252,18 +253,15 @@ export default function MapView({
           <div className="mb-1 text-xs font-semibold text-gray-600">Legend</div>
           <div className="flex flex-col gap-1 text-xs text-gray-700">
             <div className="flex items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/thingsType/thing.png" alt="Thing" className="h-4 w-4" />
+              <Image src="/thingsType/thing.png" alt="Thing" width={16} height={16} />
               <span>Thing</span>
             </div>
             <div className="flex items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/thingsType/store.png" alt="Store" className="h-4 w-4" />
+              <Image src="/thingsType/store.png" alt="Store" width={16} height={16} />
               <span>Store</span>
             </div>
             <div className="flex items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/thingsType/event.png" alt="Event" className="h-4 w-4" />
+              <Image src="/thingsType/event.png" alt="Event" width={16} height={16} />
               <span>Event</span>
             </div>
           </div>

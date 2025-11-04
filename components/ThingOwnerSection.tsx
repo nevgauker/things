@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api/client';
 import type { User } from '@/lib/api/types';
@@ -48,12 +49,7 @@ export default function ThingOwnerSection({
       <div className="mb-3 text-sm font-semibold text-gray-700">Owner</div>
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-100">
-          {avatar ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatar} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">N/A</div>
-          )}
+          <Image src={avatar || '/avatar.png'} alt="Owner avatar" width={40} height={40} className="h-full w-full object-cover" />
         </div>
         <div className="min-w-0">
           <div className="truncate text-sm text-gray-800" title={name}>{name}</div>
