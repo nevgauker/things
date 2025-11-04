@@ -43,6 +43,19 @@ export default function ThingOwnerSection({
   const avatar = ownerState?.userAvatar || fallbackAvatar || '/avatar.png';
   const name = ownerState?.name || ownerState?.email || 'Owner';
   const isOwner = !!(me?.id && ownerId && me.id === ownerId);
+  const canManage = isOwner || !!me?.isAdmin;
+
+  async function onDelete() {
+    if (!canManage) return;
+    const ok = confirm('Delete this thing? This action cannot be undone.');
+    if (!ok) return;
+    try {
+      await api.delete(`/api/things/${thingId}`);
+      router.push('/my');
+    } catch (e) {
+      alert('Failed to delete');
+    }
+  }
 
   return (
     <div className="mt-6 rounded-lg border bg-white p-4">
@@ -56,14 +69,15 @@ export default function ThingOwnerSection({
           {ownerState?.email && <div className="truncate text-xs text-gray-500" title={ownerState.email}>{ownerState.email}</div>}
         </div>
       </div>
-      {isOwner && (
-        <div className="mt-3">
+      {canManage && (
+        <div className="mt-3 flex items-center gap-2">
           <button
             className="btn-secondary"
             onClick={() => router.push(`/things/${thingId}/edit`)}
           >
-            Edit Thing
+            Edit
           </button>
+          <button className="btn-danger" onClick={onDelete}>Delete</button>
         </div>
       )}
     </div>
