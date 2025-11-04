@@ -26,44 +26,46 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  things            Thing[]
+  things Thing[]
+
+  PasswordReset PasswordReset[]
 }
 
 model Thing {
-  id              String   @id @default(cuid())
-  name            String?
-  type            String?
-  category        String?
-  ownerId         String?
-  owner           User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  ownerImageUrl   String?
-  imageUrl        String?
-  price           Float?
-  currencyCode    String?
-  country         String?
-  city            String?
-  status          String?
-  start           String?
-  end             String?
-  priceRange      Float?
-  latitude        Float?
-  longitude       Float?
-  fromGoogle      Boolean  @default(false)
-  googleData      Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String?
+  type          String?
+  category      String?
+  ownerId       String?
+  owner         User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  ownerImageUrl String?
+  imageUrl      String?
+  price         Float?
+  currencyCode  String?
+  country       String?
+  city          String?
+  status        String?
+  start         String?
+  end           String?
+  priceRange    Float?
+  latitude      Float?
+  longitude     Float?
+  fromGoogle    Boolean  @default(false)
+  googleData    Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([latitude, longitude])
 }
 
 model PasswordReset {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId])
 }
