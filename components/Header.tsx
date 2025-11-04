@@ -1,5 +1,6 @@
 "use client";
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/api/types';
@@ -33,7 +34,10 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
   return (
     <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 md:px-6">
-        <Link href="/" className="font-semibold text-primary">Things</Link>
+        <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
+          <Image src="/mainIcon.png" alt="Things" width={24} height={24} />
+          <span>Things</span>
+        </Link>
         <div className="flex-1" />
         <div className="flex w-full max-w-md items-center gap-2 rounded-lg border bg-surface px-3 py-2">
           <input
@@ -117,4 +121,3 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
     </header>
   );
 }
-
