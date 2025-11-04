@@ -17,7 +17,9 @@ export function verifyAuth(req: Request): AuthUser | null {
   const token = getAuthToken(req);
   if (!token) return null;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET is not set');
+    const decoded = jwt.verify(token, secret) as any;
     const userId = String(decoded.userId || decoded.id || decoded.sub || '');
     if (!userId) return null;
     return { userId, email: decoded.email };
@@ -25,4 +27,3 @@ export function verifyAuth(req: Request): AuthUser | null {
     return null;
   }
 }
-

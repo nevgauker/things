@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/server/prisma';
 import { uploadImageFromFormData } from '@/server/upload';
 import { verifyAuth } from '@/server/auth';
+import { z } from 'zod';
+import { rateLimit } from '@/server/rateLimit';
 
 export async function GET(_: Request, context: any) {
   const thing = await prisma.thing.findUnique({
@@ -17,6 +19,8 @@ export async function PATCH(req: Request, context: any) {
   if (!auth) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
+  const limited = rateLimit(req, { key: 'things:update', max: 50, windowMs: 10 * 60_000 });
+  if (!limited.ok) return NextResponse.json({ message: 'Too many requests' }, { status: 429 });
   const form = await req.formData();
 
   const data: any = {};
@@ -43,6 +47,25 @@ export async function PATCH(req: Request, context: any) {
     if (img) data.imageUrl = img;
   } catch (_) {}
 
+  // simple validation for provided fields
+  const schema = z.object({
+    name: z.string().max(200).optional(),
+    country: z.string().max(60).optional(),
+    city: z.string().max(60).optional(),
+    category: z.string().max(40).optional(),
+    type: z.enum(['thing','store','event']).optional(),
+    status: z.string().max(40).optional(),
+    start: z.string().optional(),
+    end: z.string().optional(),
+    currencySymbol: z.string().max(3).optional(),
+    price: z.number().nonnegative().optional(),
+    priceRange: z.number().nonnegative().optional(),
+    latitude: z.number().gte(-90).lte(90).optional(),
+    longitude: z.number().gte(-180).lte(180).optional(),
+  });
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) return NextResponse.json({ message: 'Invalid input' }, { status: 400 });
+
   // enforce ownership
   const id = String(context?.params?.id || '');
   const current = await prisma.thing.findUnique({ where: { id } });
@@ -58,6 +81,8 @@ export async function DELETE(req: Request, context: any) {
   if (!auth) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
+  const limited = rateLimit(req, { key: 'things:delete', max: 20, windowMs: 10 * 60_000 });
+  if (!limited.ok) return NextResponse.json({ message: 'Too many requests' }, { status: 429 });
   const id = String(context?.params?.id || '');
   const current = await prisma.thing.findUnique({ where: { id } });
   if (!current) return NextResponse.json({ message: 'Not found' }, { status: 404 });
@@ -66,4 +91,3 @@ export async function DELETE(req: Request, context: any) {
   await prisma.thing.delete({ where: { id } });
   return NextResponse.json({ message: 'Thing was deleted' });
 }
-

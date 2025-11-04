@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
+import { rateLimit } from '@/server/rateLimit';
 import { prisma } from '@/server/prisma';
 import { uploadImageFromFormData } from '@/server/upload';
 import { verifyAuth } from '@/server/auth';
@@ -15,15 +17,27 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const form = await req.formData();
-  const name = (form.get('name') as string) || '';
-  const email = (form.get('email') as string) || '';
-  const password = (form.get('password') as string) || '';
-  const preferredCurrency = (form.get('preferredCurrency') as string) || '$';
+  // Rate limit signups: 5 req/10min per IP
+  const limited = rateLimit(req, { key: 'auth:signup', max: 5, windowMs: 10 * 60_000 });
+  if (!limited.ok) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
-  }
+  const form = await req.formData();
+  const toStr = (v: FormDataEntryValue | null) => (typeof v === 'string' ? v : '');
+  const payload = {
+    name: toStr(form.get('name')),
+    email: toStr(form.get('email')),
+    password: toStr(form.get('password')),
+    preferredCurrency: toStr(form.get('preferredCurrency')) || '$',
+  };
+  const schema = z.object({
+    name: z.string().max(100).optional(),
+    email: z.string().email(),
+    password: z.string().min(6).max(100),
+    preferredCurrency: z.string().max(3),
+  });
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+  const { name, email, password, preferredCurrency } = parsed.data;
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return NextResponse.json({ error: 'Mail exists' }, { status: 409 });
@@ -49,7 +63,9 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const token = jwt.sign({ email: user.email, userId: String(user.id) }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+  const secret = process.env.JWT_SECRET;
+  if (!secret) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+  const token = jwt.sign({ email: user.email, userId: String(user.id) }, secret, { expiresIn: '24h' });
   const res = NextResponse.json({ message: 'Auth successful', token, user, newUser: true }, { status: 201 });
   const isProd = process.env.NODE_ENV === 'production';
   res.cookies.set('auth_token', token, {
@@ -61,4 +77,3 @@ export async function POST(req: NextRequest) {
   });
   return res;
 }
-

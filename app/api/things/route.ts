@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/server/prisma';
 import { uploadImageFromFormData } from '@/server/upload';
 import { verifyAuth } from '@/server/auth';
+import { z } from 'zod';
+import { rateLimit } from '@/server/rateLimit';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -44,6 +46,9 @@ export async function POST(req: NextRequest) {
   if (!auth) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
+  // Rate limit writes: 20 req/10min per IP
+  const limited = rateLimit(req, { key: 'things:create', max: 20, windowMs: 10 * 60_000 });
+  if (!limited.ok) return NextResponse.json({ message: 'Too many requests' }, { status: 429 });
   const form = await req.formData();
   const name = form.get('name') as string | null;
   // Ignore ownerId/ownerImageUrl from client; derive from token/user
@@ -59,8 +64,23 @@ export async function POST(req: NextRequest) {
   const end = form.get('end') as string | null;
   const priceRange = form.get('priceRange') as string | null;
 
-  if (!name || !type || !latitude || !longitude) {
-    return NextResponse.json({ message: 'mandatory params : name,type,latitude,longitude' }, { status: 400 });
+  const schema = z.object({
+    name: z.string().min(1).max(200),
+    type: z.enum(['thing','store','event']),
+    latitude: z.coerce.number().gte(-90).lte(90),
+    longitude: z.coerce.number().gte(-180).lte(180),
+    category: z.string().max(40).optional(),
+    price: z.coerce.number().nonnegative().optional(),
+    currencySymbol: z.string().max(3).optional(),
+    country: z.string().max(60).optional(),
+    city: z.string().max(60).optional(),
+    start: z.string().optional(),
+    end: z.string().optional(),
+    priceRange: z.coerce.number().nonnegative().optional(),
+  });
+  const parsed = schema.safeParse({ name, type, latitude, longitude, category, price, currencySymbol, country, city, start, end, priceRange });
+  if (!parsed.success) {
+    return NextResponse.json({ message: 'Invalid input' }, { status: 400 });
   }
 
   let imageUrl: string | undefined = undefined;
@@ -100,4 +120,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ thing }, { status: 201 });
 }
-
