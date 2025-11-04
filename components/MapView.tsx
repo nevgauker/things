@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { Bounds, Thing } from '@/lib/api/types';
 import { categories } from '@/lib/api/types';
@@ -57,6 +57,15 @@ export default function MapView({
   const userMarkerRef = useRef<any>(null);
   const hasCenteredOnUserRef = useRef(false);
   const infoWindowRef = useRef<any>(null);
+  const [legendOpen, setLegendOpen] = useState(true);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.innerWidth < 640) {
+        setLegendOpen(false);
+      }
+    } catch {}
+  }, []);
 
   function markerIconForCategory(category?: string) {
     const c = String(category || 'other').toLowerCase();
@@ -253,16 +262,40 @@ export default function MapView({
     <div className={`relative h-80 w-full overflow-hidden rounded-lg border ${className}`}>
       <div ref={ref} className="absolute inset-0" />
       {showLegend && (
-        <div className="absolute left-3 top-3 z-10 max-h-56 overflow-auto rounded-lg border bg-white/90 p-2 shadow">
-          <div className="mb-1 text-xs font-semibold text-gray-600">Categories</div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-700">
-            {categories.map((c) => (
-              <div key={c.id} className="flex items-center gap-2">
-                <Image src={`/categories/${c.name}.png`} alt={c.displayName} width={16} height={16} />
-                <span>{c.displayName}</span>
+        <div className="absolute left-3 top-3 z-10">
+          {!legendOpen ? (
+            <button
+              type="button"
+              onClick={() => setLegendOpen(true)}
+              className="rounded-lg border bg-white/90 px-3 py-1 text-xs shadow hover:bg-white"
+              aria-label="Open legend"
+            >
+              Show legend
+            </button>
+          ) : (
+            <div className="max-h-56 overflow-auto rounded-lg border bg-white/90 p-2 shadow">
+              <div className="mb-1 flex items-center justify-between gap-4">
+                <div className="text-xs font-semibold text-gray-600">Categories</div>
+                <button
+                  type="button"
+                  onClick={() => setLegendOpen(false)}
+                  className="rounded px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100"
+                  aria-label="Hide legend"
+                  title="Hide"
+                >
+                  Hide
+                </button>
               </div>
-            ))}
-          </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-700">
+                {categories.map((c) => (
+                  <div key={c.id} className="flex items-center gap-2">
+                    <Image src={`/categories/${c.name}.png`} alt={c.displayName} width={16} height={16} />
+                    <span>{c.displayName}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
       {showLocateButton && (
