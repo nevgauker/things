@@ -40,8 +40,10 @@ export default function SignInClient({ next, unauthorized }: { next: string; una
         {error && <div className="text-sm text-red-600">{error}</div>}
         <button disabled={loading} className="btn-primary w-full" type="submit">{loading ? 'Signing in…' : 'Sign in'}</button>
       </form>
-      <p className="mt-4 text-sm text-gray-600">No account? <Link href="/signup" className="text-primary">Sign up</Link></p>
+      <div className="mt-4 flex items-center justify-between text-sm">
+        <Link href="/forgot-password" className="text-gray-600 hover:text-primary">Forgot password?</Link>
+        <span className="text-gray-600">No account? <Link href="/signup" className="text-primary">Sign up</Link></span>
+      </div>
     </div>
   );
 }
-
