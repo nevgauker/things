@@ -6,6 +6,13 @@ const nextConfig = {
   typedRoutes: true,
   // Silence lockfile root detection warnings in monorepos or nested envs
   outputFileTracingRoot: __dirname,
+  images: {
+    domains: [
+      'images.unsplash.com',
+      'res.cloudinary.com',
+      'lh3.googleusercontent.com',
+    ],
+  },
   // No rewrites: client calls /api/* directly
 };
 
