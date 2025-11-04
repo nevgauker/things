@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import { symbolForCurrency } from '@/lib/money';
 import MapView from '@/components/MapView';
 import ThingOwnerSection from '@/components/ThingOwnerSection';
 import ThingActions from '@/components/ThingActions';
@@ -11,7 +12,7 @@ type Thing = {
   type?: string;
   category?: string;
   price?: number;
-  currencySymbol?: string;
+  currencyCode?: string;
   priceRange?: number;
   city?: string;
   country?: string;
@@ -101,8 +102,8 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {thing.type !== 'store' && thing.price != null && thing.currencySymbol && (
-              <div className="text-sm"><span className="text-gray-500">Price:</span> <span className="font-medium">{thing.currencySymbol}{thing.price}</span></div>
+            {thing.type !== 'store' && thing.price != null && (
+              <div className="text-sm"><span className="text-gray-500">Price:</span> <span className="font-medium">{symbolForCurrency((thing as any).currencyCode) || (thing as any).currencySymbol || ''}{thing.price}</span></div>
             )}
             {thing.type === 'store' && thing.priceRange != null && (
               <div className="text-sm"><span className="text-gray-500">Price Range:</span> <span className="font-medium">{thing.priceRange}</span></div>

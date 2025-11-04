@@ -14,7 +14,7 @@ export interface Thing {
   ownerImageUrl?: string;
   imageUrl?: string;
   price?: number;
-  currencySymbol?: string;
+  currencyCode?: string;
   country?: string;
   city?: string;
   status?: string;
@@ -71,4 +71,3 @@ export const categories = [
   { id: 11, name: 'cars', displayName: 'cars' },
   { id: 12, name: 'other', displayName: 'other' },
 ];
-

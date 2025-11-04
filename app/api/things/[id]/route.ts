@@ -24,7 +24,7 @@ export async function PATCH(req: Request, context: any) {
   const form = await req.formData();
 
   const data: any = {};
-  const strFields = ['name','country','city','category','type','status','start','end','currencySymbol'] as const;
+  const strFields = ['name','country','city','category','type','status','start','end','currencyCode'] as const;
   strFields.forEach((f) => {
     const v = form.get(f as string);
     if (v !== null) data[f] = v as string;
@@ -57,7 +57,7 @@ export async function PATCH(req: Request, context: any) {
     status: z.string().max(40).optional(),
     start: z.string().optional(),
     end: z.string().optional(),
-    currencySymbol: z.string().max(3).optional(),
+    currencyCode: z.string().length(3).optional(),
     price: z.number().nonnegative().optional(),
     priceRange: z.number().nonnegative().optional(),
     latitude: z.number().gte(-90).lte(90).optional(),

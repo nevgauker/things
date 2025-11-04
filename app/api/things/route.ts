@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const category = form.get('category') as string | null;
   const type = form.get('type') as string | null;
   const price = form.get('price') as string | null;
-  const currencySymbol = form.get('currencySymbol') as string | null;
+  const currencyCode = form.get('currencyCode') as string | null;
   const latitude = form.get('latitude') as string | null;
   const longitude = form.get('longitude') as string | null;
   const country = form.get('country') as string | null;
@@ -71,14 +71,14 @@ export async function POST(req: NextRequest) {
     longitude: z.coerce.number().gte(-180).lte(180),
     category: z.string().max(40).optional(),
     price: z.coerce.number().nonnegative().optional(),
-    currencySymbol: z.string().max(3).optional(),
+    currencyCode: z.string().length(3).optional(),
     country: z.string().max(60).optional(),
     city: z.string().max(60).optional(),
     start: z.string().optional(),
     end: z.string().optional(),
     priceRange: z.coerce.number().nonnegative().optional(),
   });
-  const parsed = schema.safeParse({ name, type, latitude, longitude, category, price, currencySymbol, country, city, start, end, priceRange });
+  const parsed = schema.safeParse({ name, type, latitude, longitude, category, price, currencyCode, country, city, start, end, priceRange });
   if (!parsed.success) {
     return NextResponse.json({ message: 'Invalid input' }, { status: 400 });
   }
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       end: type === 'event' ? end ?? undefined : undefined,
       priceRange: type === 'store' ? (priceRange ? Number(priceRange) : undefined) : undefined,
       price: type !== 'store' ? (price ? Number(price) : undefined) : undefined,
-      currencySymbol: type !== 'store' ? (currencySymbol ?? undefined) : undefined,
+      currencyCode: type !== 'store' ? (currencyCode ? String(currencyCode).toUpperCase() : undefined) : undefined,
       fromGoogle: false,
     },
   });

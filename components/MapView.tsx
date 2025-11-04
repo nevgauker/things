@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { Bounds, Thing } from '@/lib/api/types';
+import { symbolForCurrency } from '@/lib/money';
 import { categories } from '@/lib/api/types';
 import { loadGoogleMaps } from '@/lib/maps/google';
 
@@ -181,7 +182,7 @@ export default function MapView({
         const name = t.name || 'Thing';
         const cat = (t as any).category || '';
         const price = (t as any).price;
-        const currency = (t as any).currencySymbol || '';
+        const currency = symbolForCurrency((t as any).currencyCode) || (t as any).currencySymbol || '';
         const image = (t as any).imageUrl || '';
         const snippetParts = [
           cat ? `<div class=\"text-xs text-gray-600\">${cat}</div>` : '',

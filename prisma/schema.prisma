@@ -39,7 +39,7 @@ model Thing {
   ownerImageUrl   String?
   imageUrl        String?
   price           Float?
-  currencySymbol  String?
+  currencyCode    String?
   country         String?
   city            String?
   status          String?

@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { categories } from '@/lib/api/types';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import { api } from '@/lib/api/client';
+import { symbolForCurrency } from '@/lib/money';
+
+function symbolToCode(sym?: string): string | undefined {
+  const map: Record<string, string> = { '$': 'USD', '€': 'EUR', '£': 'GBP', 'A$': 'AUD', 'C$': 'CAD', '¥': 'JPY', '₹': 'INR' };
+  if (!sym) return undefined;
+  return map[sym] || undefined;
+}
 
 type Thing = {
   id: string;
@@ -13,7 +20,7 @@ type Thing = {
   type?: string;
   category?: string;
   price?: number;
-  currencySymbol?: string;
+  currencyCode?: string;
   city?: string;
   country?: string;
   status?: string;
@@ -29,7 +36,7 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
   const [type, setType] = useState(thing.type || 'thing');
   const [category, setCategory] = useState(thing.category || '');
   const [price, setPrice] = useState(thing.price != null ? String(thing.price) : '');
-  const [currencySymbol, setCurrencySymbol] = useState(thing.currencySymbol || '$');
+  const [currencyCode, setCurrencyCode] = useState<string>((thing as any).currencyCode || symbolToCode((thing as any).currencySymbol) || 'USD');
   const [latitude, setLatitude] = useState(thing.latitude != null ? String(thing.latitude) : '');
   const [longitude, setLongitude] = useState(thing.longitude != null ? String(thing.longitude) : '');
   const [country, setCountry] = useState(thing.country || '');
@@ -63,7 +70,7 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
         if (end) form.set('end', end);
       } else if (showPrice) {
         if (price) form.set('price', price);
-        if (currencySymbol) form.set('currencySymbol', currencySymbol);
+        if (currencyCode) form.set('currencyCode', currencyCode);
       }
       if (thingImage) form.set('thingImage', thingImage);
 
@@ -145,7 +152,15 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Currency</label>
-              <input className="w-full rounded border px-3 py-2" value={currencySymbol} onChange={(e)=>setCurrencySymbol(e.target.value)} placeholder="$" />
+              <select className="w-full rounded border px-3 py-2" value={currencyCode} onChange={(e)=>setCurrencyCode(e.target.value)}>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="AUD">AUD (A$)</option>
+                <option value="CAD">CAD (C$)</option>
+                <option value="JPY">JPY (¥)</option>
+                <option value="INR">INR (₹)</option>
+              </select>
             </div>
           </>
         )}

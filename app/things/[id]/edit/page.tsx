@@ -7,7 +7,7 @@ type Thing = {
   type?: string;
   category?: string;
   price?: number;
-  currencySymbol?: string;
+  currencyCode?: string;
   city?: string;
   country?: string;
   status?: string;
@@ -48,4 +48,3 @@ export default async function EditThingPage({ params }: { params: Promise<{ id: 
     </div>
   );
 }
-

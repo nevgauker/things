@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { createThing } from '@/lib/api/endpoints';
 import type { User } from '@/lib/api/types';
 import { categories } from '@/lib/api/types';
+import { symbolForCurrency } from '@/lib/money';
 import { loadGoogleMaps } from '@/lib/maps/google';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import { useAuth } from '@/lib/auth/provider';
@@ -18,7 +19,7 @@ export default function NewThingPage() {
   const [category, setCategory] = useState<string>('');
   const [price, setPrice] = useState<string>('');
   const [priceRange, setPriceRange] = useState<string>('');
-  const [currencySymbol, setCurrencySymbol] = useState<string>('$');
+  const [currencyCode, setCurrencyCode] = useState<string>('USD');
   const [latitude, setLatitude] = useState<string>('');
   const [longitude, setLongitude] = useState<string>('');
   const [country, setCountry] = useState<string>('');
@@ -99,7 +100,7 @@ export default function NewThingPage() {
         if (priceRange) form.set('priceRange', priceRange);
       } else {
         if (price) form.set('price', price);
-        if (currencySymbol) form.set('currencySymbol', currencySymbol);
+        if (currencyCode) form.set('currencyCode', currencyCode);
       }
       if (thingImage) form.set('thingImage', thingImage);
 
@@ -163,7 +164,15 @@ export default function NewThingPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Currency</label>
-                <input className="w-full rounded border px-3 py-2" value={currencySymbol} onChange={(e)=>setCurrencySymbol(e.target.value)} placeholder="$" />
+                <select className="w-full rounded border px-3 py-2" value={currencyCode} onChange={(e)=>setCurrencyCode(e.target.value)}>
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="AUD">AUD (A$)</option>
+                  <option value="CAD">CAD (C$)</option>
+                  <option value="JPY">JPY (¥)</option>
+                  <option value="INR">INR (₹)</option>
+                </select>
               </div>
             </>
           )}
@@ -237,4 +246,3 @@ export default function NewThingPage() {
     </div>
   );
 }
-

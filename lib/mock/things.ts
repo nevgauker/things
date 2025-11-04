@@ -28,7 +28,7 @@ export const mockThings: Thing[] = Array.from({ length: 24 }).map((_, i) => {
     imageUrl: pick(sampleImages, i),
     price,
     priceRange,
-    currencySymbol: price != null ? '$' : undefined,
+    currencyCode: price != null ? 'USD' : undefined,
     country: 'United States',
     city: 'San Francisco',
     status: i % 7 === 0 ? 'unavailable' : 'available',
@@ -42,4 +42,3 @@ export const mockThings: Thing[] = Array.from({ length: 24 }).map((_, i) => {
 export function getMockThings() {
   return mockThings;
 }
-
