@@ -57,19 +57,13 @@ export default function MapView({
   const infoWindowRef = useRef<any>(null);
 
   function markerIconForType(type?: string) {
-    const t = String(type || '').toLowerCase();
-    let fill = '#6b7280'; // gray-500 default
-    if (t === 'thing') fill = '#2563eb'; // blue-600
-    else if (t === 'store') fill = '#16a34a'; // green-600
-    else if (t === 'event') fill = '#f59e0b'; // amber-500
+    const t = String(type || 'thing').toLowerCase();
+    const url = `/thingsType/${['thing','store','event'].includes(t) ? t : 'thing'}.png`;
     return {
-      path: window.google.maps.SymbolPath.CIRCLE,
-      scale: 7,
-      fillColor: fill,
-      fillOpacity: 1,
-      strokeColor: '#ffffff',
-      strokeWeight: 2,
-    };
+      url,
+      scaledSize: new window.google.maps.Size(28, 28),
+      anchor: new window.google.maps.Point(14, 14),
+    } as any;
   }
 
   useEffect(() => {
@@ -181,7 +175,7 @@ export default function MapView({
           price != null && currency ? `<div class=\"text-sm font-medium\">${currency}${price}</div>` : '',
         ].filter(Boolean);
         const detailsUrl = id ? `/things/${id}` : undefined;
-        const imgHtml = image ? `<img src=\"${image}\" alt=\"\" style=\"width:56px;height:56px;object-fit:cover;border-radius:6px;margin-right:8px;float:left;\" />` : '';
+        const imgHtml = `<img src=\"${image || '/placeholder.png'}\" alt=\"\" style=\"width:56px;height:56px;object-fit:cover;border-radius:6px;margin-right:8px;float:left;\" />`;
         const contentHtml = `
           <div style=\"min-width:220px;max-width:280px;overflow:hidden;\">
             <div style=\"display:flex;align-items:flex-start;\">
@@ -258,15 +252,18 @@ export default function MapView({
           <div className="mb-1 text-xs font-semibold text-gray-600">Legend</div>
           <div className="flex flex-col gap-1 text-xs text-gray-700">
             <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: '#2563eb' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/thingsType/thing.png" alt="Thing" className="h-4 w-4" />
               <span>Thing</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: '#16a34a' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/thingsType/store.png" alt="Store" className="h-4 w-4" />
               <span>Store</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: '#f59e0b' }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/thingsType/event.png" alt="Event" className="h-4 w-4" />
               <span>Event</span>
             </div>
           </div>
@@ -291,4 +288,3 @@ export default function MapView({
     </div>
   );
 }
-

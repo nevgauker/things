@@ -66,6 +66,11 @@ export default function LocationPickerMap({ lat, lng, className = '', onChange, 
               map: mapRef.current,
               position,
               draggable: true,
+              icon: {
+                url: '/marker.png',
+                scaledSize: new (window as any).google.maps.Size(28, 28),
+                anchor: new (window as any).google.maps.Point(14, 28),
+              },
             });
             markerDragListener = (window as any).google.maps.event.addListener(markerRef.current, 'dragend', () => {
               const p = markerRef.current.getPosition();
@@ -128,4 +133,3 @@ export default function LocationPickerMap({ lat, lng, className = '', onChange, 
 
   return <div className={`relative h-64 w-full overflow-hidden rounded-lg border ${className}`}><div ref={ref} className="absolute inset-0" /></div>;
 }
-

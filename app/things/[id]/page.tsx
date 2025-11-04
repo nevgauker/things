@@ -72,12 +72,8 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
         {/* Left: Cover image */}
         <div className="overflow-hidden rounded-lg border bg-white">
           <div className="relative h-64 w-full bg-gray-100 md:h-80">
-            {thing.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={thing.imageUrl} alt={thing.name || 'Thing'} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full items-center justify-center text-gray-400">No image</div>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={thing.imageUrl || '/placeholder.png'} alt={thing.name || 'Thing'} className="h-full w-full object-cover" />
           </div>
         </div>
 
@@ -147,4 +143,3 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
     </div>
   );
 }
-

@@ -39,7 +39,7 @@ export default function ThingOwnerSection({
     return () => { mounted = false; };
   }, [ownerId, owner]);
 
-  const avatar = ownerState?.userAvatar || fallbackAvatar;
+  const avatar = ownerState?.userAvatar || fallbackAvatar || '/avatar.png';
   const name = ownerState?.name || ownerState?.email || 'Owner';
   const isOwner = !!(me?.id && ownerId && me.id === ownerId);
 
@@ -73,4 +73,3 @@ export default function ThingOwnerSection({
     </div>
   );
 }
-

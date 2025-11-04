@@ -36,6 +36,7 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
   const [start, setStart] = useState(thing.start || '');
   const [end, setEnd] = useState(thing.end || '');
   const [thingImage, setThingImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(thing.imageUrl || null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -76,6 +77,17 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
 
   return (
     <form onSubmit={onSubmit} className="card space-y-4 p-4">
+      {/* Preview */}
+      <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="relative h-40 w-full bg-gray-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={previewUrl || '/placeholder.png'}
+            alt={name || 'Thing image'}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-medium">Name</label>
@@ -83,20 +95,30 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Type</label>
-          <select className="w-full rounded border px-3 py-2" value={type} onChange={(e)=>setType(e.target.value)}>
-            <option value="thing">Thing</option>
-            <option value="store">Store</option>
-            <option value="event">Event</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <img src={`/thingsType/${type || 'thing'}.png`} alt="" className="h-5 w-5" />
+            <select className="w-full rounded border px-3 py-2" value={type} onChange={(e)=>setType(e.target.value)}>
+              <option value="thing">Thing</option>
+              <option value="store">Store</option>
+              <option value="event">Event</option>
+            </select>
+          </div>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Category</label>
-          <select className="w-full rounded border px-3 py-2" value={category} onChange={(e)=>setCategory(e.target.value)}>
+          <div className="flex items-center gap-2">
+            {category ? (
+              <img src={`/categories/${category}.png`} alt="" className="h-5 w-5" />
+            ) : (
+              <img src={'/categories/other.png'} alt="" className="h-5 w-5 opacity-60" />
+            )}
+            <select className="w-full rounded border px-3 py-2" value={category} onChange={(e)=>setCategory(e.target.value)}>
             <option value="">Select a category</option>
             {categories.map((c)=> (
               <option key={c.id} value={c.name}>{c.displayName}</option>
             ))}
-          </select>
+            </select>
+          </div>
         </div>
         {showPrice && (
           <>
@@ -149,7 +171,20 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
         </div>
         <div className="sm:col-span-2">
           <label className="mb-1 block text-sm font-medium">Image</label>
-          <input type="file" accept="image/*" onChange={(e)=>setThingImage(e.target.files?.[0] || null)} />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e)=>{
+              const f = e.target.files?.[0] || null;
+              setThingImage(f);
+              if (f) {
+                const url = URL.createObjectURL(f);
+                setPreviewUrl(url);
+              } else {
+                setPreviewUrl(thing.imageUrl || null);
+              }
+            }}
+          />
         </div>
       </div>
       {error && <div className="text-sm text-red-600">{error}</div>}
@@ -160,4 +195,3 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
     </form>
   );
 }
-

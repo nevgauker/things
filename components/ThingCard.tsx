@@ -4,12 +4,12 @@ export default function ThingCard({ thing }: { thing: Thing }) {
   return (
     <article className="card overflow-hidden">
       <div className="relative h-40 w-full bg-gray-100">
-        {thing.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={thing.imageUrl} alt={thing.name ?? 'Thing'} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-gray-400">No image</div>
-        )}
+        {// eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={thing.imageUrl || '/placeholder.png'}
+          alt={thing.name ?? 'Thing'}
+          className="h-full w-full object-cover"
+        />}
       </div>
       <div className="space-y-1 p-4">
         <h3 className="truncate text-base font-semibold" title={thing.name}>{thing.name}</h3>
@@ -27,4 +27,3 @@ export default function ThingCard({ thing }: { thing: Thing }) {
     </article>
   );
 }
-
