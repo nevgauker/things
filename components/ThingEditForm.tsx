@@ -109,6 +109,20 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">Category</label>
+          <div className="mb-2 grid grid-cols-6 gap-2 sm:grid-cols-8">
+            {categories.map((c) => (
+              <button
+                type="button"
+                key={c.id}
+                onClick={() => setCategory(c.name)}
+                className={`flex items-center justify-center rounded border p-2 hover:border-primary ${category === c.name ? 'border-primary ring-1 ring-primary' : 'border-gray-200'}`}
+                aria-label={c.displayName}
+                title={c.displayName}
+              >
+                <Image src={`/categories/${c.name}.png`} alt={c.displayName} width={24} height={24} />
+              </button>
+            ))}
+          </div>
           <div className="flex items-center gap-2">
             {category ? (
               <Image src={`/categories/${category}.png`} alt="Category icon" width={20} height={20} />

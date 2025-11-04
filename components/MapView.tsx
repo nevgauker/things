@@ -57,9 +57,13 @@ export default function MapView({
   const hasCenteredOnUserRef = useRef(false);
   const infoWindowRef = useRef<any>(null);
 
-  function markerIconForType(type?: string) {
-    const t = String(type || 'thing').toLowerCase();
-    const url = `/thingsType/${['thing','store','event'].includes(t) ? t : 'thing'}.png`;
+  function markerIconForCategory(category?: string) {
+    const c = String(category || 'other').toLowerCase();
+    const known = [
+      'gadgets','fashion','art','travel','food','entertainment','garden','household','pets','hobbies','office','cars','other'
+    ];
+    const file = known.includes(c) ? c : 'other';
+    const url = `/categories/${file}.png`;
     return {
       url,
       scaledSize: new window.google.maps.Size(28, 28),
@@ -163,7 +167,7 @@ export default function MapView({
           map: mapRef.current,
           position: { lat: lat as number, lng: lng as number },
           title: t.name || undefined,
-          icon: markerIconForType((t as any).type),
+          icon: markerIconForCategory((t as any).category),
         });
         const id = (t as any).id || (t as any)._id;
         const name = t.name || 'Thing';
@@ -177,12 +181,13 @@ export default function MapView({
         ].filter(Boolean);
         const detailsUrl = id ? `/things/${id}` : undefined;
         const imgHtml = `<img src=\"${image || '/placeholder.png'}\" alt=\"\" style=\"width:56px;height:56px;object-fit:cover;border-radius:6px;margin-right:8px;float:left;\" />`;
+        const catIcon = cat ? `<img src=\"/categories/${cat}.png\" alt=\"\" style=\"width:16px;height:16px;margin-right:6px;\" />` : '';
         const contentHtml = `
           <div style=\"min-width:220px;max-width:280px;overflow:hidden;\">
             <div style=\"display:flex;align-items:flex-start;\">
               ${imgHtml}
               <div style=\"overflow:hidden;\">
-                <div style=\"font-weight:600;margin-bottom:4px\">${name}</div>
+                <div style=\"font-weight:600;margin-bottom:4px;display:flex;align-items:center;\">${catIcon}<span>${name}</span></div>
                 ${snippetParts.join('')}
               </div>
             </div>
@@ -250,19 +255,19 @@ export default function MapView({
       <div ref={ref} className="absolute inset-0" />
       {showLegend && (
         <div className="absolute left-3 top-3 z-10 rounded-lg border bg-white/90 p-2 shadow">
-          <div className="mb-1 text-xs font-semibold text-gray-600">Legend</div>
+          <div className="mb-1 text-xs font-semibold text-gray-600">Categories</div>
           <div className="flex flex-col gap-1 text-xs text-gray-700">
             <div className="flex items-center gap-2">
-              <Image src="/thingsType/thing.png" alt="Thing" width={16} height={16} />
-              <span>Thing</span>
+              <Image src="/categories/gadgets.png" alt="Gadgets" width={16} height={16} />
+              <span>Gadgets</span>
             </div>
             <div className="flex items-center gap-2">
-              <Image src="/thingsType/store.png" alt="Store" width={16} height={16} />
-              <span>Store</span>
+              <Image src="/categories/food.png" alt="Food" width={16} height={16} />
+              <span>Food</span>
             </div>
             <div className="flex items-center gap-2">
-              <Image src="/thingsType/event.png" alt="Event" width={16} height={16} />
-              <span>Event</span>
+              <Image src="/categories/travel.png" alt="Travel" width={16} height={16} />
+              <span>Travel</span>
             </div>
           </div>
         </div>
