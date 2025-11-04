@@ -58,6 +58,7 @@ export default function MapView({
   const userMarkerRef = useRef<any>(null);
   const hasCenteredOnUserRef = useRef(false);
   const infoWindowRef = useRef<any>(null);
+  const clustererRef = useRef<any>(null);
   const [legendOpen, setLegendOpen] = useState(true);
 
   useEffect(() => {
@@ -162,9 +163,14 @@ export default function MapView({
       try { m.setMap(null); } catch {}
     }
     markersRef.current = [];
+    try {
+      clustererRef.current?.clearMarkers?.();
+      clustererRef.current = null;
+    } catch {}
 
     const bounds = new window.google.maps.LatLngBounds();
     let added = 0;
+    const newMarkers: any[] = [];
 
     for (const t of items) {
       let lat: number | undefined;
@@ -179,7 +185,6 @@ export default function MapView({
       }
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
         const marker = new window.google.maps.Marker({
-          map: mapRef.current,
           position: { lat: lat as number, lng: lng as number },
           title: t.name || undefined,
           icon: markerIconForCategory((t as any).category),
@@ -218,10 +223,33 @@ export default function MapView({
           } catch {}
         });
 
-        markersRef.current.push(marker);
+        newMarkers.push(marker);
         bounds.extend(marker.getPosition());
         added++;
       }
+    }
+
+    if (newMarkers.length) {
+      // Avoid bundler static resolution
+      // eslint-disable-next-line no-eval
+      const dynImport: any = (0, eval)('import');
+      dynImport('@googlemaps/markerclusterer')
+        .then((mod: any) => {
+          try {
+            clustererRef.current = new mod.MarkerClusterer({ map: mapRef.current, markers: newMarkers });
+          } catch {
+            for (const m of newMarkers) {
+              try { m.setMap(mapRef.current); } catch {}
+              markersRef.current.push(m);
+            }
+          }
+        })
+        .catch(() => {
+          for (const m of newMarkers) {
+            try { m.setMap(mapRef.current); } catch {}
+            markersRef.current.push(m);
+          }
+        });
     }
 
     if (fitToItems && added > 0 && !hasCenteredOnUserRef.current) {
