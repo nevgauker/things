@@ -60,6 +60,9 @@ export async function signIn(email: string, password: string) {
     '/api/auth/signin',
     { email, password }
   );
+
+
+  console.log(`sign in res: ${res}`)
   if (typeof window !== 'undefined') {
     // Token is now stored as HttpOnly cookie by the server.
     window.localStorage.setItem('user', JSON.stringify(res.data.user));
