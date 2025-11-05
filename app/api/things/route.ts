@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   const schema = z.object({
     name: z.string().min(1).max(200),
-    type: z.enum(['thing','store','event']),
+    type: z.enum(['thing', 'store', 'event']),
     latitude: z.coerce.number().gte(-90).lte(90),
     longitude: z.coerce.number().gte(-180).lte(180),
     category: z.string().max(40).optional(),
@@ -74,12 +74,24 @@ export async function POST(req: NextRequest) {
     currencyCode: z.string().length(3).optional(),
     country: z.string().max(60).optional(),
     city: z.string().max(60).optional(),
-    start: z.string().optional(),
-    end: z.string().optional(),
+    start: z.string().optional().nullable(),
+    end: z.string().optional().nullable(),
     priceRange: z.coerce.number().nonnegative().optional(),
   });
   const parsed = schema.safeParse({ name, type, latitude, longitude, category, price, currencyCode, country, city, start, end, priceRange });
   if (!parsed.success) {
+    try {
+      const issues: any[] = (parsed as any).error?.issues || [];
+      const details = issues.map((i) => ({
+        path: Array.isArray(i.path) ? i.path.join('.') : String(i.path ?? ''),
+        message: i.message,
+        expected: i.expected,
+        received: i.received,
+      }));
+      console.error('[POST /api/things] Validation failed', { details });
+    } catch (e) {
+      console.error('[POST /api/things] Validation failed (could not format error)');
+    }
     return NextResponse.json({ message: 'Invalid input' }, { status: 400 });
   }
 
@@ -87,14 +99,14 @@ export async function POST(req: NextRequest) {
   try {
     const uploaded = await uploadImageFromFormData(form as unknown as FormData, 'thingImage', process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
     if (uploaded) imageUrl = uploaded;
-  } catch (_) {}
+  } catch (_) { }
 
   // Optionally fetch user to set owner avatar
   let ownerImageUrl: string | undefined = undefined;
   try {
     const owner = await prisma.user.findUnique({ where: { id: auth.userId } });
     if (owner?.userAvatar) ownerImageUrl = owner.userAvatar;
-  } catch {}
+  } catch { }
 
   const createData: any = {
     name,
