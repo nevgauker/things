@@ -38,7 +38,7 @@ export function useFetchThingsByBounds(params: {
   return useQuery({
     queryKey: ['things', params],
     queryFn: async () => fetchThings(params),
-    enabled: true,
+    enabled: !!params.bounds,
   });
 }
 
@@ -93,4 +93,3 @@ export async function fetchUserById(id: string) {
   const res = await api.get<{ user: User }>(`/api/users/${id}`);
   return res.data.user;
 }
-

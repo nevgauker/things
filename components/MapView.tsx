@@ -87,6 +87,7 @@ export default function MapView({
   useEffect(() => {
     let listener: any;
     let debounceTimer: any;
+    let initialEmitTimer: any;
 
     loadGoogleMaps()
       .then(() => {
@@ -116,8 +117,12 @@ export default function MapView({
           }, 150);
         };
 
-        listener = window.google.maps.event.addListenerOnce(mapRef.current, "idle", emitBounds);
-        window.google.maps.event.addListener(mapRef.current, "idle", emitBounds);
+        // Attach recurring bounds listener, but delay the very first emit
+        listener = window.google.maps.event.addListener(mapRef.current, "idle", emitBounds);
+        // Fallback: if geolocation is unavailable/denied, emit once after short delay
+        initialEmitTimer = setTimeout(() => {
+          emitBounds();
+        }, 1200);
 
         // User location marker
         if (showUserLocation && navigator.geolocation) {
@@ -142,7 +147,7 @@ export default function MapView({
               });
             },
             () => { },
-            { maximumAge: 60000 }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
           );
         }
       })
@@ -153,6 +158,7 @@ export default function MapView({
         window.google.maps.event.removeListener(listener);
       }
       if (debounceTimer) clearTimeout(debounceTimer);
+      if (initialEmitTimer) clearTimeout(initialEmitTimer);
       userMarkerRef.current?.setMap(null);
     };
   }, [onBoundsChanged, showUserLocation]);
@@ -290,7 +296,7 @@ export default function MapView({
         }
       },
       () => { },
-      { maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
     );
   };
 
