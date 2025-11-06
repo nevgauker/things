@@ -3,11 +3,10 @@ import HomePageClient from '@/components/HomePageClient';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen">
+    <div>
       <Suspense fallback={null}>
         <HomePageClient />
       </Suspense>
     </div>
   );
 }
-

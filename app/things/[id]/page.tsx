@@ -68,6 +68,14 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
   const rating = thing.googleData?.rating;
   const ratingsTotal = thing.googleData?.user_ratings_total;
 
+  const statusClass = (s?: string) => {
+    const v = (s || '').toLowerCase();
+    if (v === 'available' || v === 'active') return 'bg-green-100 text-green-700';
+    if (v === 'unavailable' || v === 'inactive') return 'bg-gray-100 text-gray-700';
+    if (v === 'sold' || v === 'ended') return 'bg-red-100 text-red-700';
+    return 'bg-blue-100 text-blue-700';
+  };
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
       <div className="grid gap-6 md:grid-cols-2">
@@ -93,11 +101,11 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-            {thing.type && <span className="rounded bg-gray-100 px-2 py-0.5 text-xs uppercase">{thing.type}</span>}
-            {thing.category && <span className="rounded bg-gray-100 px-2 py-0.5 text-xs">{thing.category}</span>}
-            {thing.status && <span className="rounded bg-gray-100 px-2 py-0.5 text-xs">{thing.status}</span>}
+            {thing.type && <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs uppercase text-indigo-700">{thing.type}</span>}
+            {thing.category && <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{thing.category}</span>}
+            {thing.status && <span className={`rounded px-2 py-0.5 text-xs ${statusClass(thing.status)}`}>{thing.status}</span>}
             {typeof rating === 'number' && (
-              <span className="rounded bg-gray-100 px-2 py-0.5 text-xs">⭐ {rating} {ratingsTotal ? `(${ratingsTotal})` : ''}</span>
+              <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700">⭐ {rating} {ratingsTotal ? `(${ratingsTotal})` : ''}</span>
             )}
           </div>
 
@@ -123,7 +131,7 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
             {(derivedLat != null && derivedLng != null) && (
               <div>
                 <a
-                  className="text-sm text-primary underline"
+                  className="btn-secondary text-sm"
                   href={`https://www.google.com/maps?q=${encodeURIComponent(`${derivedLat},${derivedLng}`)}`}
                   target="_blank" rel="noopener noreferrer"
                 >

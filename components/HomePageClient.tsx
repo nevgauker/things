@@ -1,8 +1,7 @@
 "use client";
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import MapView from '@/components/MapView';
-import CategoryChips from '@/components/CategoryChips';
 import ThingCard from '@/components/ThingCard';
 import { useFetchThingsByBounds } from '@/lib/api/endpoints';
 import type { Bounds } from '@/lib/api/types';
@@ -12,11 +11,28 @@ export default function HomePageClient() {
   const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [bounds, setBounds] = useState<Bounds | null>(null);
+  const [mapHeight, setMapHeight] = useState<number | null>(null);
 
   useEffect(() => {
     const s = searchParams.get('search') || '';
     setSearch(s);
+    const catParam = searchParams.get('category') || '';
+    const cats = catParam.split(',').map((t)=>t.trim()).filter(Boolean);
+    setSelectedCategories(cats);
   }, [searchParams]);
+
+  // Compute available height = full viewport (map shows behind transparent header)
+  useEffect(() => {
+    function compute() {
+      const vh = typeof window !== 'undefined' ? window.innerHeight : 0;
+      setMapHeight(vh || null);
+    }
+    compute();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', compute);
+      return () => window.removeEventListener('resize', compute);
+    }
+  }, []);
 
   const { data, isLoading } = useFetchThingsByBounds({
     searchText: search || undefined,
@@ -28,25 +44,21 @@ export default function HomePageClient() {
 
   return (
     <Suspense>
-      <main className="mx-auto max-w-6xl px-4 md:px-6">
-        <section className="py-3">
-          <CategoryChips value={selectedCategories} onChange={setSelectedCategories} />
-        </section>
-
-        <section className="py-2">
-          <MapView
-            onBoundsChanged={setBounds}
-            items={items as any}
-            className="h-[70vh] sm:h-[75vh] md:h-[78vh]"
-          />
-          {!isLoading && items.length === 0 && (
-            <div className="mt-2 text-sm text-gray-500">No things found in this area.</div>
-          )}
-        </section>
-      </main>
-
+      <div className="relative w-full" style={{ height: mapHeight ? `${mapHeight}px` : '100vh' }}>
+        <MapView
+          onBoundsChanged={setBounds}
+          items={items as any}
+          className="h-full rounded-none border-0"
+          showLegend={false}
+        />
+        
+        {!isLoading && items.length === 0 && (
+          <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-lg border bg-white/90 px-3 py-1 text-sm text-gray-600 shadow">
+            No things found in this area.
+          </div>
+        )}
+      </div>
     </Suspense>
 
   );
 }
-

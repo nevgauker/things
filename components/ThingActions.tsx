@@ -8,6 +8,7 @@ export default function ThingActions({ thingId, ownerId, thingName }: { thingId:
   const router = useRouter();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
   const url = typeof window !== 'undefined' ? window.location.origin + `/things/${thingId}` : '';
 
   async function onShare() {
@@ -22,9 +23,24 @@ export default function ThingActions({ thingId, ownerId, thingName }: { thingId:
     } catch {}
   }
 
+  function onToggleSave() {
+    setSaved((s) => !s);
+  }
+
+  async function onReport() {
+    const ok = confirm('Report this item for review?');
+    if (!ok) return;
+    try {
+      // Optional: send to server later; for now just acks UI
+      alert('Thanks for your report. We will review.');
+    } catch {}
+  }
+
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2">
       <button className="btn-secondary" onClick={onShare}>{copied ? 'Copied!' : 'Share'}</button>
+      <button className="btn-success" onClick={onToggleSave}>{saved ? 'Saved' : 'Save'}</button>
+      <button className="btn-warning" onClick={onReport}>Report</button>
     </div>
   );
 }

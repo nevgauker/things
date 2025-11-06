@@ -59,6 +59,7 @@ export default function MapView({
   const markersRef = useRef<any[]>([]);
   const userMarkerRef = useRef<any>(null);
   const hasCenteredOnUserRef = useRef(false);
+  const pendingCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const infoWindowRef = useRef<any>(null);
   const clustererRef = useRef<any>(null);
   const [legendOpen, setLegendOpen] = useState(true);
@@ -89,10 +90,50 @@ export default function MapView({
     let debounceTimer: any;
     let initialEmitTimer: any;
 
+    // Request geolocation as early as possible, and remember it for initial map center
+    if (showUserLocation && typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          pendingCenterRef.current = p;
+          if (mapRef.current && window.google?.maps) {
+            mapRef.current.setCenter(p);
+            mapRef.current.setZoom(14);
+            hasCenteredOnUserRef.current = true;
+            if (userMarkerRef.current) {
+              userMarkerRef.current.setPosition(p);
+              userMarkerRef.current.setMap(mapRef.current);
+            } else {
+              userMarkerRef.current = new window.google.maps.Marker({
+                map: mapRef.current,
+                position: p,
+                title: "You are here",
+                icon: {
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  scale: 8,
+                  fillColor: "#1a73e8",
+                  fillOpacity: 1,
+                  strokeColor: "#ffffff",
+                  strokeWeight: 2,
+                },
+              });
+            }
+          }
+          // If we were waiting to emit bounds, center+zoom will trigger an idle soon
+          if (initialEmitTimer) {
+            clearTimeout(initialEmitTimer);
+            initialEmitTimer = undefined as unknown as any;
+          }
+        },
+        () => { },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+      );
+    }
+
     loadGoogleMaps()
       .then(() => {
         if (!ref.current) return;
-        const center = { lat: 37.7749, lng: -122.4194 }; // Default SF
+        const center = pendingCenterRef.current || { lat: 37.7749, lng: -122.4194 }; // Default SF
         mapRef.current = new window.google.maps.Map(ref.current, {
           center,
           zoom: 12,
@@ -124,31 +165,25 @@ export default function MapView({
           emitBounds();
         }, 1200);
 
-        // User location marker
-        if (showUserLocation && navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-              mapRef.current?.setCenter(p);
-              mapRef.current?.setZoom(14);
-              hasCenteredOnUserRef.current = true;
-              userMarkerRef.current = new window.google.maps.Marker({
-                map: mapRef.current,
-                position: p,
-                title: "You are here",
-                icon: {
-                  path: window.google.maps.SymbolPath.CIRCLE,
-                  scale: 8,
-                  fillColor: "#1a73e8",
-                  fillOpacity: 1,
-                  strokeColor: "#ffffff",
-                  strokeWeight: 2,
-                },
-              });
+        // If we already have a pending center from early geolocation, ensure marker is shown
+        if (showUserLocation && pendingCenterRef.current && window.google?.maps) {
+          const p = pendingCenterRef.current;
+          mapRef.current?.setCenter(p);
+          mapRef.current?.setZoom(14);
+          hasCenteredOnUserRef.current = true;
+          userMarkerRef.current = new window.google.maps.Marker({
+            map: mapRef.current,
+            position: p,
+            title: "You are here",
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: "#1a73e8",
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 2,
             },
-            () => { },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
-          );
+          });
         }
       })
       .catch(() => { });
@@ -301,7 +336,7 @@ export default function MapView({
   };
 
   return (
-    <div className={`relative h-80 w-full overflow-hidden rounded-lg border ${className}`}>
+    <div className={`relative w-full overflow-hidden ${className}`}>
       <div ref={ref} className="absolute inset-0" />
       {showLegend && (
         <div className="absolute left-3 top-3 z-10">

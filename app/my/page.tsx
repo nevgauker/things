@@ -1,13 +1,16 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { fetchMyThings } from '@/lib/api/endpoints';
 import ThingCard from '@/components/ThingCard';
 import CategoryChips from '@/components/CategoryChips';
 import type { Thing } from '@/lib/api/types';
 import { getMockThings } from '@/lib/mock/things';
 import { useAuth } from '@/lib/auth/provider';
+import { api } from '@/lib/api/client';
 
 export default function MyThingsPage() {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +94,18 @@ export default function MyThingsPage() {
 
   useEffect(() => { setPage(1); }, [search, selectedCategories, type, status, allItems]);
 
+  async function onDelete(id: string) {
+    const ok = confirm('Delete this thing? This action cannot be undone.');
+    if (!ok) return;
+    try {
+      await api.delete(`/api/things/${id}`);
+      setAllItems((items) => items.filter((x) => x.id !== id));
+      setMyItems((items) => (items ? items.filter((x) => x.id !== id) : items));
+    } catch (e) {
+      alert('Failed to delete');
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-6">
       {!authLoading && !user && (
@@ -143,7 +158,18 @@ export default function MyThingsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {pageItems.map((t: any) => (
-          <ThingCard key={t.id} thing={t} />
+          <div key={t.id} className="flex flex-col gap-2">
+            <ThingCard thing={t} />
+            <div className="flex items-center gap-2">
+              <button className="btn-secondary" onClick={() => router.push(`/things/${t.id}`)}>View</button>
+              {source === 'my' && user && (
+                <>
+                  <button className="btn-primary" onClick={() => router.push(`/things/${t.id}/edit`)}>Edit</button>
+                  <button className="btn-danger" onClick={() => onDelete(t.id)}>Delete</button>
+                </>
+              )}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -157,4 +183,3 @@ export default function MyThingsPage() {
     </div>
   );
 }
-
