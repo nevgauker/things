@@ -16,7 +16,13 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: 'Invalid credentials' }, { status: 400 });
   const { email, password } = parsed.data;
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  let user: any = null;
+  try {
+    user = await prisma.user.findUnique({ where: { email } });
+  } catch (e) {
+    console.error('[signin] prisma error', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
   if (!user || !user.password) return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
 
   const ok = await bcrypt.compare(password, user.password);
@@ -41,3 +47,4 @@ export async function POST(req: NextRequest) {
   });
   return res;
 }
+export const runtime = 'nodejs';
