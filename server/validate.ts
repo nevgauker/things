@@ -9,27 +9,22 @@ export const z: any = (() => {
     const dynamicRequire: NodeRequire = eval('require');
     return dynamicRequire('zod');
   } catch {
-    const chain = (self: any) => ({
-      email: () => self,
-      min: () => self,
-      max: () => self,
-      length: () => self,
-      optional: () => self,
-      nonnegative: () => self,
-      gte: () => self,
-      lte: () => self,
-    });
-    const string = () => chain({});
-    const number = () => chain({});
+    const makeChain = () => {
+      const obj: any = {};
+      const methods = ['email', 'min', 'max', 'length', 'optional', 'nonnegative', 'gte', 'lte'];
+      for (const m of methods) (obj as any)[m] = () => obj;
+      return obj;
+    };
+    const string = () => makeChain();
+    const number = () => makeChain();
     return {
       string,
       number,
       coerce: { number },
-      enum: (_vals: string[]) => ({ optional: () => ({}) }),
+      enum: (_vals: string[]) => ({ optional: () => makeChain() }),
       object: (_shape: Record<string, unknown>) => ({
         safeParse: (payload: unknown) => ({ success: true, data: payload }),
       }),
     };
   }
 })();
-
