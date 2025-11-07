@@ -57,6 +57,7 @@ export default function LocationPickerMap({ lat, lng, className = '', onChange, 
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
+          zoomControl: false,
           styles: mapStyles as any,
         });
 

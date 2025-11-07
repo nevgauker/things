@@ -33,6 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     staleTime: 60_000,
     enabled: !onAuthPage, // prevent fetch + redirect loops on auth pages
     retry: false,
+    initialData: typeof window !== 'undefined' ? ((): User | null => {
+      try {
+        const s = window.localStorage.getItem('user');
+        return s ? (JSON.parse(s) as User) : null;
+      } catch { return null; }
+    })() : undefined,
   });
 
   const value = useMemo<AuthContextValue>(() => ({
@@ -57,4 +63,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
-

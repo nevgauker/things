@@ -137,9 +137,11 @@ export default function MapView({
         mapRef.current = new window.google.maps.Map(ref.current, {
           center,
           zoom: 12,
+          disableDefaultUI: true,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
+          zoomControl: false,
           styles: mapStyles as any,
         });
 
@@ -380,30 +382,49 @@ export default function MapView({
         </div>
       )}
       {showLocateButton && (
-        <button
-          type="button"
-          aria-label="Locate me"
-          onClick={recenterOnUser}
-          className="absolute top-3 right-3 z-10 rounded-full border bg-white p-2 shadow hover:bg-gray-50"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-gray-700"
+        <div className="absolute bottom-3 right-3 z-10 flex flex-col items-center">
+          <button
+            type="button"
+            aria-label="My location"
+            className="rounded-full border bg-white/95 p-1.5 text-gray-700 shadow hover:bg-gray-100"
+            onClick={recenterOnUser}
           >
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 2v3"></path>
-            <path d="M12 19v3"></path>
-            <path d="M22 12h-3"></path>
-            <path d="M5 12H2"></path>
-          </svg>
-        </button>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 2v3"></path>
+              <path d="M12 19v3"></path>
+              <path d="M22 12h-3"></path>
+              <path d="M5 12H2"></path>
+            </svg>
+          </button>
+          <div className="h-2" />
+          <div className="flex flex-col items-center overflow-hidden rounded-md border bg-white/95 shadow">
+            <button
+              type="button"
+              aria-label="Zoom in"
+              className="px-2 py-1.5 text-gray-700 hover:bg-gray-100"
+              onClick={() => {
+                if (!mapRef.current) return;
+                const z = mapRef.current.getZoom?.() ?? 12;
+                mapRef.current.setZoom(Math.min(21, z + 1));
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <button
+              type="button"
+              aria-label="Zoom out"
+              className="border-t border-gray-200 px-2 py-1.5 text-gray-700 hover:bg-gray-100"
+              onClick={() => {
+                if (!mapRef.current) return;
+                const z = mapRef.current.getZoom?.() ?? 12;
+                mapRef.current.setZoom(Math.max(0, z - 1));
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

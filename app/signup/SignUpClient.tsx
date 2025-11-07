@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/api/endpoints';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function SignUpClient({ next }: { next: string }) {
   const router = useRouter();
+  const qc = useQueryClient();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +21,12 @@ export default function SignUpClient({ next }: { next: string }) {
     setLoading(true);
     setError(null);
     try {
-      await signUp({ name, email, password, preferredCurrency, userAvatar: avatar });
+      const res = await signUp({ name, email, password, preferredCurrency, userAvatar: avatar });
+      // Persist and optimistically set auth state to avoid flicker
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('user', JSON.stringify(res.user));
+      }
+      qc.setQueryData(['auth', 'me'], res.user);
       router.push(next as any);
     } catch (err: any) {
       setError(err?.response?.data?.error ?? 'Sign-up failed');
@@ -54,4 +61,3 @@ export default function SignUpClient({ next }: { next: string }) {
     </div>
   );
 }
-

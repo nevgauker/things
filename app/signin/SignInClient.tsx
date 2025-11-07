@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from '@/lib/api/endpoints';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function SignInClient({ next, unauthorized }: { next: string; unauthorized?: string | null }) {
   const router = useRouter();
+  const qc = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +23,9 @@ export default function SignInClient({ next, unauthorized }: { next: string; una
     setLoading(true);
     setError(null);
     try {
-      await signIn(email, password);
+      const res = await signIn(email, password);
+      // Optimistically set auth state to avoid flicker
+      qc.setQueryData(['auth', 'me'], res.user);
       router.push(next as any);
     } catch (err: any) {
       setError(err?.response?.data?.error ?? 'Sign-in failed');

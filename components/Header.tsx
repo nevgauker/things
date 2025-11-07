@@ -54,11 +54,11 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
   }
   return (
     <header className="fixed top-0 left-0 right-0 z-10 bg-transparent">
-      <div className="flex w-full items-center gap-2 px-2 py-2 md:px-3">
+      <div className="flex h-12 w-full items-center gap-2 px-2 md:px-3">
         {/* Left: logo + search */}
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
-            <Image src="/mainIcon.png" alt="Things" width={24} height={24} />
+            <Image src="/mainIcon.png" alt="Things" width={32} height={32} />
             <span className="hidden sm:inline">Things</span>
           </Link>
           <div className="hidden sm:flex">
@@ -101,12 +101,8 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
           </div>
         </div>
 
-        {/* Center: horizontally scrollable filters (mobile-friendly) */}
-        <div className="flex flex-1 items-center justify-center">
-          <div className="max-w-full overflow-x-auto px-2">
-            <CategoryChips value={cats} onChange={onCatsChange} />
-          </div>
-        </div>
+        {/* Center area now empty; filters moved below header */}
+        <div className="flex flex-1 items-center justify-center" />
 
         {/* Right: quick actions + user (desktop) */}
         <nav className="hidden items-center gap-2 md:flex">
@@ -126,7 +122,7 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
             </Link>
           )}
           {!user ? (
-            <Link href="/signin" className="text-sm text-gray-700 hover:text-primary">Sign in</Link>
+            <Link href="/signin" className="btn-primary">Sign in</Link>
           ) : (
             <div className="flex items-center gap-3">
               <button
@@ -147,7 +143,7 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
         {/* Right: user/menu trigger (mobile) */}
         <div className="flex items-center gap-2 md:hidden">
           {!user ? (
-            <Link href="/signin" className="text-sm text-gray-800 hover:text-primary">Sign in</Link>
+            <Link href="/signin" className="btn-primary">Sign in</Link>
           ) : (
             <button
               ref={menuBtnRef as any}
@@ -185,6 +181,15 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
           </div>
         )}
       </div>
+
+      {/* Fixed filter bar below the nav */}
+      {pathname === '/' && (
+        <div className="fixed top-12 left-0 right-0 z-10 px-2 md:px-3">
+          <div className="max-w-full overflow-x-auto scrollbar-none">
+            <CategoryChips value={cats} onChange={onCatsChange} nowrap className="py-1" />
+          </div>
+        </div>
+      )}
     </header>
   );
 }
