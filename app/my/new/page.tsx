@@ -8,6 +8,7 @@ import { symbolForCurrency } from '@/lib/money';
 import { loadGoogleMaps } from '@/lib/maps/google';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import { useAuth } from '@/lib/auth/provider';
+import Image from 'next/image';
 
 type ThingType = 'thing' | 'store' | 'event';
 
@@ -30,6 +31,8 @@ export default function NewThingPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [typeOpen, setTypeOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -38,6 +41,18 @@ export default function NewThingPage() {
     } catch {
       setUser(null);
     }
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      if (!t.closest('[data-dd="type"]')) setTypeOpen(false);
+      if (!t.closest('[data-dd="category"]')) setCategoryOpen(false);
+    }
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
   }, []);
 
   async function useCurrentLocation() {
@@ -144,30 +159,93 @@ export default function NewThingPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium">Type</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              </span>
-              <select className="w-full rounded border pl-9 pr-3 py-2" value={type} onChange={(e)=>setType(e.target.value as ThingType)}>
-              <option value="thing">Thing</option>
-              <option value="store">Store</option>
-              <option value="event">Event</option>
-              </select>
+            <div className="relative" data-dd="type">
+              <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={typeOpen}
+                onClick={()=>setTypeOpen((v)=>!v)}
+                className="relative w-full rounded border pl-9 pr-8 py-2 text-left hover:border-gray-400"
+              >
+                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                  {type === 'store' ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M16 22H8a4 4 0 0 1-4-4V9h20v9a4 4 0 0 1-4 4Z"/></svg>
+                  ) : type === 'event' ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  )}
+                </span>
+                <span className="block truncate capitalize">{type}</span>
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">▾</span>
+              </button>
+              {typeOpen && (
+                <ul role="listbox" className="absolute z-10 mt-1 w-full overflow-auto rounded border bg-white py-1 text-sm shadow">
+                  {([
+                    { id: 'thing', label: 'Thing' },
+                    { id: 'store', label: 'Store' },
+                    { id: 'event', label: 'Event' },
+                  ] as {id: ThingType; label: string}[]).map((opt)=> (
+                    <li key={opt.id} role="option" aria-selected={type===opt.id}>
+                      <button type="button" onClick={()=>{ setType(opt.id); setTypeOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50">
+                        <span className="text-gray-600">
+                          {opt.id === 'store' ? (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M16 22H8a4 4 0 0 1-4-4V9h20v9a4 4 0 0 1-4 4Z"/></svg>
+                          ) : opt.id === 'event' ? (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                          )}
+                        </span>
+                        <span className="capitalize">{opt.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">Category</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
-              </span>
-              <select className="w-full rounded border pl-9 pr-3 py-2" value={category} onChange={(e)=>setCategory(e.target.value)}>
-              <option value="">Select a category</option>
-              {categories.map((c)=> (
-                <option key={c.id} value={c.name}>{c.displayName}</option>
-              ))}
-              </select>
+            <div className="relative" data-dd="category">
+              <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={categoryOpen}
+                onClick={()=>setCategoryOpen((v)=>!v)}
+                className="relative w-full rounded border pl-9 pr-8 py-2 text-left hover:border-gray-400"
+              >
+                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                  {category ? (
+                    <Image src={`/categories/${category}.png`} alt="" width={16} height={16} />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+                  )}
+                </span>
+                <span className="block truncate">{category ? categories.find(c=>c.name===category)?.displayName : 'Select a category'}</span>
+                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">▾</span>
+              </button>
+              {categoryOpen && (
+                <ul role="listbox" className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded border bg-white py-1 text-sm shadow">
+                  <li key="none">
+                    <button type="button" onClick={()=>{ setCategory(''); setCategoryOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50">
+                      <span className="text-gray-600">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+                      </span>
+                      <span>None</span>
+                    </button>
+                  </li>
+                  {categories.map((c)=> (
+                    <li key={c.id} role="option" aria-selected={category===c.name}>
+                      <button type="button" onClick={()=>{ setCategory(c.name); setCategoryOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50">
+                        <Image src={`/categories/${c.name}.png`} alt="" width={16} height={16} />
+                        <span>{c.displayName}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
