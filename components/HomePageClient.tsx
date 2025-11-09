@@ -60,11 +60,7 @@ export default function HomePageClient() {
           </div>
         )}
         
-        {!isLoading && !isFetchingThings && items.length === 0 && (
-          <div className="pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 rounded-lg border bg-white/90 px-3 py-1 text-sm text-gray-600 shadow">
-            No things found in this area.
-          </div>
-        )}
+        
       </div>
       <HomeListSheet items={items as any} loading={isLoading} />
     </Suspense>
