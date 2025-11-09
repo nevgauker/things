@@ -7,6 +7,7 @@ import { symbolForCurrency } from '@/lib/money';
 import MapView from '@/components/MapView';
 import ThingOwnerSection from '@/components/ThingOwnerSection';
 import ThingActions from '@/components/ThingActions';
+import DistanceIndicator from '@/components/DistanceIndicator';
 
 type Thing = {
   id: string;
@@ -102,6 +103,7 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
               <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700">Google</span>
             )}
           </div>
+          <DistanceIndicator ownerId={thing.ownerId as any} lat={derivedLat} lng={derivedLng} />
           <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
             {thing.type && <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs uppercase text-indigo-700">{thing.type}</span>}
             {thing.category && <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{thing.category}</span>}
