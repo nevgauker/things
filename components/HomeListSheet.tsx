@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Thing } from '@/lib/api/types';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 export default function HomeListSheet({ items, loading }: { items: Thing[]; loading?: boolean }) {
@@ -20,6 +20,25 @@ export default function HomeListSheet({ items, loading }: { items: Thing[]; load
     if (sortKey === 'priceDesc') return arr.sort((a: any, b: any) => (b.price ?? -Infinity) - (a.price ?? -Infinity));
     return arr; // newest is default from API
   }, [items, sortKey]);
+
+  // Persist open/closed state in localStorage
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = window.localStorage.getItem('home_results_sheet_open');
+        if (saved === '1' || saved === 'true') setOpen(true);
+      }
+    } catch {}
+    // no deps: run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('home_results_sheet_open', open ? '1' : '0');
+      }
+    } catch {}
+  }, [open]);
   return (
     <div className="pointer-events-auto fixed bottom-0 left-1/2 z-20 -translate-x-1/2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px))' }}>
       <div className={`relative mb-2 w-[80vw] max-w-[520px] overflow-hidden rounded-t-2xl border bg-white/95 shadow-lg ring-1 ring-black/5 transition-[height] sm:max-w-[560px] lg:max-w-[640px] ${open ? 'h-64' : 'h-10'}`}>
