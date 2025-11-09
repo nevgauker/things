@@ -54,11 +54,6 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
     const cookieStore = await cookies();
     const token = cookieStore.get('auth_token')?.value;
     if (!token) redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
-    const authRes = await fetch(`/api/auth/me`, {
-      cache: 'no-store',
-      headers: { cookie: `auth_token=${encodeURIComponent(token)}` },
-    });
-    if (!authRes.ok) redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
   } catch {
     redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
   }
