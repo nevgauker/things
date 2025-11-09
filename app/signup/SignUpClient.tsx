@@ -45,23 +45,26 @@ export default function SignUpClient({ next }: { next: string }) {
       </div>
       <h1 className="mb-4 text-2xl font-semibold">Create account</h1>
       <form onSubmit={onSubmit} className="card space-y-4 p-4">
+        <label htmlFor="name" className="sr-only">Name</label>
         <div className="relative">
           <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
           </span>
-          <input className="w-full rounded border pl-9 pr-3 py-2" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input id="name" className="w-full rounded border pl-9 pr-3 py-2" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
+        <label htmlFor="email" className="sr-only">Email</label>
         <div className="relative">
           <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z" fill="none"/><path d="M22 6l-10 7L2 6" /></svg>
           </span>
-          <input className="w-full rounded border pl-9 pr-3 py-2" placeholder="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="email" className="w-full rounded border pl-9 pr-3 py-2" placeholder="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
+        <label htmlFor="password" className="sr-only">Password</label>
         <div className="relative">
           <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
           </span>
-          <input
+          <input id="password"
             className="w-full rounded border pl-9 pr-10 py-2"
             placeholder="Password"
             type={showPassword ? 'text' : 'password'}

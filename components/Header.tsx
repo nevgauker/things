@@ -54,7 +54,8 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
   }
   return (
     <header className="fixed top-0 left-0 right-0 z-10 bg-transparent">
-      <div className="flex h-12 w-full items-center gap-2 px-2 md:px-3">
+      <div className="relative flex h-12 w-full items-center gap-2 px-2 md:px-3">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/70 to-transparent"></div>
         {/* Left: logo + search */}
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2 font-semibold text-primary">

@@ -63,6 +63,7 @@ export default function MapView({
   const infoWindowRef = useRef<any>(null);
   const clustererRef = useRef<any>(null);
   const [legendOpen, setLegendOpen] = useState(true);
+  const [ariaMessage, setAriaMessage] = useState<string>("");
 
   // Close legend on mobile
   useEffect(() => {
@@ -387,7 +388,7 @@ export default function MapView({
             type="button"
             aria-label="My location"
             className="rounded-full border bg-white/95 p-1.5 text-gray-700 shadow hover:bg-gray-100"
-            onClick={recenterOnUser}
+            onClick={() => { recenterOnUser(); setAriaMessage('Centered on your location'); setTimeout(()=>setAriaMessage(''), 1500); }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
@@ -426,6 +427,7 @@ export default function MapView({
           </div>
         </div>
       )}
+      <div aria-live="polite" className="sr-only">{ariaMessage}</div>
     </div>
   );
 }

@@ -20,8 +20,19 @@ export default function CategoryChips({
     onChange(Array.from(set));
   };
 
+  function onKeyScroll(e: React.KeyboardEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    if (e.key === 'ArrowRight') { el.scrollBy({ left: 80, behavior: 'smooth' }); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { el.scrollBy({ left: -80, behavior: 'smooth' }); e.preventDefault(); }
+  }
+
   return (
-    <div className={`-mx-1 flex snap-x snap-mandatory flex-row ${nowrap ? 'flex-nowrap' : 'flex-wrap'} gap-2 overflow-x-auto scrollbar-none px-1 py-1 ${className}`}>
+    <div
+      className={`-mx-1 flex snap-x snap-mandatory flex-row ${nowrap ? 'flex-nowrap' : 'flex-wrap'} gap-2 overflow-x-auto scrollbar-none px-1 py-1 ${className}`}
+      tabIndex={0}
+      aria-label="Filter categories"
+      onKeyDown={onKeyScroll}
+    >
       {categories.map((c) => {
         const active = value.includes(c.name);
         return (
