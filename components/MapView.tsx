@@ -65,6 +65,7 @@ export default function MapView({
   const infoWindowRef = useRef<any>(null);
   const clustererRef = useRef<any>(null);
   const [legendOpen, setLegendOpen] = useState(true);
+  const [mapReady, setMapReady] = useState(false);
   const [ariaMessage, setAriaMessage] = useState<string>("");
 
   // Close legend on mobile
@@ -152,6 +153,7 @@ export default function MapView({
           disableDoubleClickZoom: !interactive,
           styles: mapStyles as any,
         });
+        setMapReady(true);
 
         const emitBounds = () => {
           if (!onBoundsChanged) return;
@@ -208,9 +210,9 @@ export default function MapView({
     };
   }, [onBoundsChanged, showUserLocation, interactive]);
 
-  // Update markers when items change
+  // Update markers when items change or map becomes ready
   useEffect(() => {
-    if (!items || !mapRef.current || !window.google?.maps) return;
+    if (!items || !mapRef.current || !window.google?.maps || !mapReady) return;
 
     // Clear old markers
     for (const m of markersRef.current) m.setMap(null);
@@ -319,7 +321,7 @@ export default function MapView({
         mapRef.current.fitBounds(bounds, 40);
       }
     }
-  }, [items, fitToItems]);
+  }, [items, fitToItems, mapReady]);
 
   // Locate user again
   const recenterOnUser = () => {
