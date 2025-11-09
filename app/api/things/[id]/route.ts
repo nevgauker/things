@@ -43,8 +43,31 @@ export async function PATCH(req: Request, context: any) {
   }
 
   try {
-    const img = await uploadImageFromFormData(form as unknown as FormData, 'thingImage', process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
-    if (img) data.imageUrl = img;
+    const uploads: string[] = [];
+    const entries: [string, any][] = [];
+    try {
+      // @ts-ignore - runtime FormData
+      for (const pair of (form as any).entries()) entries.push(pair as [string, any]);
+    } catch {}
+    const keys = new Set<string>();
+    for (const [k, v] of entries) {
+      if (k.startsWith('thingImage') && typeof v !== 'string') keys.add(k);
+    }
+    if (keys.size === 0) {
+      const up = await uploadImageFromFormData(form as unknown as FormData, 'thingImage', process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
+      if (up) uploads.push(up);
+    } else {
+      for (const k of keys) {
+        try {
+          const up = await uploadImageFromFormData(form as unknown as FormData, k, process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
+          if (up) uploads.push(up);
+        } catch {}
+      }
+    }
+    if (uploads.length) {
+      data.imageUrl = uploads[0];
+      (data as any).images = uploads as any;
+    }
   } catch (_) {}
 
   // simple validation for provided fields

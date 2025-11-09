@@ -40,6 +40,7 @@ model Thing {
   owner         User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   ownerImageUrl String?
   imageUrl      String?
+  images        Json?
   price         Float?
   currencyCode  String?
   country       String?

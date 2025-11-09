@@ -96,9 +96,34 @@ export async function POST(req: NextRequest) {
   }
 
   let imageUrl: string | undefined = undefined;
+  let images: string[] | undefined = undefined;
   try {
-    const uploaded = await uploadImageFromFormData(form as unknown as FormData, 'thingImage', process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
-    if (uploaded) imageUrl = uploaded;
+    const uploads: string[] = [];
+    // Collect all files whose key starts with thingImage
+    const entries: [string, any][] = [];
+    try {
+      // @ts-ignore - runtime FormData
+      for (const pair of (form as any).entries()) entries.push(pair as [string, any]);
+    } catch {}
+    const keys = new Set<string>();
+    for (const [k, v] of entries) {
+      if (k.startsWith('thingImage') && typeof v !== 'string') keys.add(k);
+    }
+    if (keys.size === 0) {
+      const up = await uploadImageFromFormData(form as unknown as FormData, 'thingImage', process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
+      if (up) uploads.push(up);
+    } else {
+      for (const k of keys) {
+        try {
+          const up = await uploadImageFromFormData(form as unknown as FormData, k, process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
+          if (up) uploads.push(up);
+        } catch {}
+      }
+    }
+    if (uploads.length) {
+      imageUrl = uploads[0];
+      images = uploads;
+    }
   } catch (_) { }
 
   // Optionally fetch user to set owner avatar
@@ -113,6 +138,7 @@ export async function POST(req: NextRequest) {
     ownerId: auth.userId,
     ownerImageUrl: ownerImageUrl ?? undefined,
     imageUrl,
+    images: images ? (images as any) : undefined,
     type: type ?? undefined,
     category: category ?? undefined,
     latitude: latitude ? Number(latitude) : undefined,

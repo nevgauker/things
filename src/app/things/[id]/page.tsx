@@ -11,6 +11,7 @@ type Thing = {
   id: string;
   name?: string;
   imageUrl?: string;
+  images?: string[];
   type?: string;
   category?: string;
   price?: number;
@@ -93,7 +94,7 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
         <div className="overflow-hidden rounded-lg border bg-white">
           <div className="relative h-64 w-full bg-gray-100 md:h-80">
             <Image
-              src={thing.imageUrl || '/placeholder.png'}
+              src={(thing.images && thing.images[0]) || thing.imageUrl || '/placeholder.png'}
               alt={thing.name || 'Thing'}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"

@@ -13,6 +13,7 @@ export interface Thing {
   ownerId?: string;
   ownerImageUrl?: string;
   imageUrl?: string;
+  images?: string[];
   price?: number;
   currencyCode?: string;
   country?: string;
