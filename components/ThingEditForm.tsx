@@ -249,7 +249,11 @@ export default function ThingEditForm({ thing }: { thing: Thing }) {
           <label className="inline-flex cursor-pointer items-center gap-2 rounded border bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M20.4 14.5L16 10 4 22"/></svg>
             <span>Add images</span>
-            <input multiple type="file" accept="image/*" className="hidden" onChange={(e)=> setUploads(Array.from(e.target.files || [])) } />
+            <input multiple type="file" accept="image/*" className="hidden" onChange={(e)=> {
+              const max = Math.max(0, 5 - existingImages.length);
+              const files = Array.from(e.target.files || []).slice(0, max);
+              setUploads(files);
+            }} />
           </label>
           {uploads.length>0 && (
             <div className="mt-2 flex flex-wrap gap-2">

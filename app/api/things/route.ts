@@ -121,8 +121,9 @@ export async function POST(req: NextRequest) {
       }
     }
     if (uploads.length) {
-      imageUrl = uploads[0];
-      images = uploads;
+      const capped = uploads.slice(0, 5);
+      imageUrl = capped[0];
+      images = capped;
     }
   } catch (_) { }
 

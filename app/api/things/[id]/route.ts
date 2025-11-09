@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/server/prisma';
 import { uploadImageFromFormData } from '@/server/upload';
+import { cloudinary } from '@/server/cloudinary';
 import { verifyAuth } from '@/server/auth';
 import { z } from '@/server/validate';
 import { rateLimit } from '@/server/rateLimit';
@@ -110,8 +111,47 @@ export async function PATCH(req: Request, context: any) {
   if (!current) return NextResponse.json({ message: 'Not found' }, { status: 404 });
   if (current.ownerId !== auth.userId) return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
 
+  // Cap images to 5
+  if (Array.isArray((data as any).images)) {
+    (data as any).images = (data as any).images.slice(0, 5);
+    (data as any).imageUrl = (data as any).images[0] || (data as any).imageUrl || null;
+  }
+
+  // Best-effort cleanup of removed images from Cloudinary
+  try {
+    const prevImages: string[] = Array.isArray((current as any).images)
+      ? ((current as any).images as any[]).filter(Boolean)
+      : (current.imageUrl ? [current.imageUrl] : []);
+    const nextImages: string[] = Array.isArray((data as any).images)
+      ? (data as any).images
+      : prevImages;
+    const removed = prevImages.filter((u) => !nextImages.includes(u));
+    for (const url of removed) {
+      const publicId = publicIdFromUrl(url);
+      if (publicId) {
+        try { await cloudinary.uploader.destroy(publicId); } catch {}
+      }
+    }
+  } catch {}
+
   const thing = await prisma.thing.update({ where: { id }, data });
   return NextResponse.json({ message: 'Updated thing', thing });
+}
+
+function publicIdFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const idx = u.pathname.indexOf('/upload/');
+    if (idx === -1) return null;
+    let rest = u.pathname.slice(idx + 8); // after /upload/
+    const parts = rest.split('/');
+    if (parts.length && /^v\d+$/.test(parts[0])) parts.shift();
+    let path = parts.join('/');
+    path = path.replace(/\.[a-zA-Z0-9]+$/, '');
+    return path || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function DELETE(req: Request, context: any) {
