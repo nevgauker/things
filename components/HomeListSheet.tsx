@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 export default function HomeListSheet({ items, loading }: { items: Thing[]; loading?: boolean }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [sortKey, setSortKey] = useState<'newest'|'priceAsc'|'priceDesc'>('newest');
