@@ -28,6 +28,7 @@ export default function NewThingPage() {
   const [start, setStart] = useState<string>('');
   const [end, setEnd] = useState<string>('');
   const [thingImages, setThingImages] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -44,6 +45,15 @@ export default function NewThingPage() {
       setUser(null);
     }
   }, []);
+
+  // Generate and cleanup preview URLs for selected images
+  useEffect(() => {
+    const urls = thingImages.map((f) => URL.createObjectURL(f));
+    setPreviewUrls(urls);
+    return () => {
+      try { urls.forEach((u) => URL.revokeObjectURL(u)); } catch {}
+    };
+  }, [thingImages]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -393,11 +403,19 @@ export default function NewThingPage() {
                 </label>
                 {thingImages.length>0 && <span className="truncate text-xs text-gray-600">{thingImages.length} selected</span>}
               </div>
-              {thingImages.length>0 && (
+              {previewUrls.length>0 && (
                 <div className="flex flex-wrap gap-2">
-                  {thingImages.map((f, i)=> (
+                  {previewUrls.map((u, i)=> (
                     <div key={i} className="relative h-16 w-16 overflow-hidden rounded border">
-                      <Image src={URL.createObjectURL(f)} alt="" width={64} height={64} className="h-16 w-16 object-cover" />
+                      <Image src={u} alt="" width={64} height={64} className="h-16 w-16 object-cover" />
+                      <button
+                        type="button"
+                        aria-label="Remove image"
+                        className="absolute right-0 top-0 m-0.5 rounded bg-white/80 p-0.5 text-gray-700 hover:bg-white"
+                        onClick={() => setThingImages((arr)=> arr.filter((_, idx)=> idx !== i))}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
                     </div>
                   ))}
                 </div>

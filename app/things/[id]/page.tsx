@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import ThingImageGallery from '@/components/ThingImageGallery';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { symbolForCurrency } from '@/lib/money';
@@ -91,17 +92,7 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-6">
       <div className="grid gap-6 md:grid-cols-2">
         {/* Left: Cover image */}
-        <div className="overflow-hidden rounded-lg border bg-white">
-          <div className="relative h-64 w-full bg-gray-100 md:h-80">
-            <Image
-              src={(thing.images && thing.images[0]) || thing.imageUrl || '/placeholder.png'}
-              alt={thing.name || 'Thing'}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover"
-            />
-          </div>
-        </div>
+        <ThingImageGallery images={thing.images || (thing.imageUrl ? [thing.imageUrl] : [])} name={thing.name || 'Thing'} />
 
         {/* Right: Details */}
         <div className="space-y-3">
