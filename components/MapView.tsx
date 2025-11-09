@@ -45,6 +45,7 @@ export default function MapView({
   showUserLocation = true,
   showLocateButton = true,
   showLegend = true,
+  interactive = true,
 }: {
   className?: string;
   onBoundsChanged?: (b: Bounds) => void;
@@ -53,6 +54,7 @@ export default function MapView({
   showUserLocation?: boolean;
   showLocateButton?: boolean;
   showLegend?: boolean;
+  interactive?: boolean;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -92,7 +94,7 @@ export default function MapView({
     let initialEmitTimer: any;
 
     // Request geolocation as early as possible, and remember it for initial map center
-    if (showUserLocation && typeof navigator !== "undefined" && navigator.geolocation) {
+    if (interactive && showUserLocation && typeof navigator !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -143,6 +145,11 @@ export default function MapView({
           streetViewControl: false,
           fullscreenControl: false,
           zoomControl: false,
+          keyboardShortcuts: interactive,
+          draggable: interactive,
+          gestureHandling: interactive ? "greedy" : "none",
+          clickableIcons: interactive,
+          disableDoubleClickZoom: !interactive,
           styles: mapStyles as any,
         });
 
@@ -199,7 +206,7 @@ export default function MapView({
       if (initialEmitTimer) clearTimeout(initialEmitTimer);
       userMarkerRef.current?.setMap(null);
     };
-  }, [onBoundsChanged, showUserLocation]);
+  }, [onBoundsChanged, showUserLocation, interactive]);
 
   // Update markers when items change
   useEffect(() => {
@@ -267,13 +274,15 @@ export default function MapView({
             : ""
           }
           </div>`;
-        marker.addListener("click", () => {
-          if (!infoWindowRef.current) {
-            infoWindowRef.current = new window.google.maps.InfoWindow();
-          }
-          infoWindowRef.current.setContent(contentHtml);
-          infoWindowRef.current.open({ map: mapRef.current, anchor: marker });
-        });
+        if (interactive) {
+          marker.addListener("click", () => {
+            if (!infoWindowRef.current) {
+              infoWindowRef.current = new window.google.maps.InfoWindow();
+            }
+            infoWindowRef.current.setContent(contentHtml);
+            infoWindowRef.current.open({ map: mapRef.current, anchor: marker });
+          });
+        }
 
         newMarkers.push(marker);
         bounds.extend(marker.getPosition());
@@ -307,7 +316,7 @@ export default function MapView({
 
   // Locate user again
   const recenterOnUser = () => {
-    if (!mapRef.current || !showUserLocation || !navigator.geolocation) return;
+    if (!interactive || !mapRef.current || !showUserLocation || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };

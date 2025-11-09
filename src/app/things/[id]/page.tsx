@@ -153,6 +153,8 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
           fitToItems
           showLegend={false}
           showLocateButton={false}
+          showUserLocation={false}
+          interactive={false}
         />
       </div>
     </div>
