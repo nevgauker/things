@@ -221,6 +221,7 @@ export default function MapView({
     const bounds = new window.google.maps.LatLngBounds();
     let added = 0;
     const newMarkers: any[] = [];
+    let firstPoint: { lat: number; lng: number } | null = null;
 
     for (const t of items) {
       let lat: number | undefined;
@@ -286,6 +287,7 @@ export default function MapView({
 
         newMarkers.push(marker);
         bounds.extend(marker.getPosition());
+        if (!firstPoint) firstPoint = { lat: lat as number, lng: lng as number };
         added++;
       }
     }
@@ -309,8 +311,13 @@ export default function MapView({
       })();
     }
 
-    if (fitToItems && added > 0 && !hasCenteredOnUserRef.current) {
-      mapRef.current.fitBounds(bounds, 40);
+    if (!hasCenteredOnUserRef.current && added > 0) {
+      if (added === 1 && firstPoint) {
+        mapRef.current.setCenter(firstPoint);
+        mapRef.current.setZoom(15);
+      } else if (fitToItems) {
+        mapRef.current.fitBounds(bounds, 40);
+      }
     }
   }, [items, fitToItems]);
 

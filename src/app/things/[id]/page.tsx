@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import ThingOwnerSection from '@/components/ThingOwnerSection';
 import { symbolForCurrency } from '@/lib/money';
 import Image from 'next/image';
+import { redirect } from 'next/navigation';
 import ThingActions from '@/components/ThingActions';
 import MapView from '@/components/MapView';
 
@@ -47,6 +48,15 @@ async function getThing(id: string): Promise<Thing | null> {
 
 export default async function ThingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Protect route: require signed-in user
+  try {
+    const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/auth/me`, { cache: 'no-store' });
+    if (!authRes.ok) {
+      redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
+    }
+  } catch {
+    redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
+  }
   const thing = await getThing(id);
   if (!thing) {
     return (
