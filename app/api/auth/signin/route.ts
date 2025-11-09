@@ -38,12 +38,15 @@ export async function POST(req: NextRequest) {
 
   const res = NextResponse.json({ message: 'Auth successful', token, user, newUser: false });
   const isProd = process.env.NODE_ENV === 'production';
+  const reqOrigin = req.headers.get('origin') || '';
+  const selfOrigin = new URL(req.url).origin;
+  const crossSite = !!reqOrigin && reqOrigin !== selfOrigin;
   res.cookies.set('auth_token', token, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: crossSite ? 'none' : 'lax',
     path: '/',
     maxAge: 60 * 60 * 24,
-    secure: isProd,
+    secure: isProd || crossSite,
   });
   return res;
 }

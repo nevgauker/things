@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
-export const api = axios.create({ baseURL });
+export const api = axios.create({ baseURL, withCredentials: true });
 
 // Attach token if stored (legacy). Now we rely on HttpOnly cookie; this remains for fallbacks.
 api.interceptors.request.use((config) => {
@@ -23,4 +23,3 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
