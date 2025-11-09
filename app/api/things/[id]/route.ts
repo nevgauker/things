@@ -42,8 +42,9 @@ export async function PATCH(req: Request, context: any) {
     data.longitude = Number(lngStr);
   }
 
+  let uploads: string[] = [];
   try {
-    const uploads: string[] = [];
+    const collected: string[] = [];
     const entries: [string, any][] = [];
     try {
       // @ts-ignore - runtime FormData
@@ -55,20 +56,34 @@ export async function PATCH(req: Request, context: any) {
     }
     if (keys.size === 0) {
       const up = await uploadImageFromFormData(form as unknown as FormData, 'thingImage', process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
-      if (up) uploads.push(up);
+      if (up) collected.push(up);
     } else {
       for (const k of keys) {
         try {
           const up = await uploadImageFromFormData(form as unknown as FormData, k, process.env.DEVELOPMENT_THINGS_IMAGES_PATH);
-          if (up) uploads.push(up);
+          if (up) collected.push(up);
         } catch {}
       }
     }
-    if (uploads.length) {
-      data.imageUrl = uploads[0];
-      (data as any).images = uploads as any;
-    }
+    uploads = collected;
   } catch (_) {}
+
+  // Allow client to set/override images order via JSON (existing images), append uploads
+  const imagesJson = form.get('imagesJson');
+  if (imagesJson && typeof imagesJson === 'string') {
+    try {
+      const base: string[] = JSON.parse(imagesJson);
+      const finalArr = Array.isArray(base) ? base.slice() : [];
+      if (uploads.length) finalArr.push(...uploads);
+      if (finalArr.length) {
+        (data as any).images = finalArr as any;
+        (data as any).imageUrl = finalArr[0];
+      }
+    } catch {}
+  } else if (uploads.length) {
+    (data as any).images = uploads as any;
+    (data as any).imageUrl = uploads[0];
+  }
 
   // simple validation for provided fields
   const schema = z.object({
