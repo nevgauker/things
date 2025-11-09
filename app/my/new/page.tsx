@@ -27,12 +27,14 @@ export default function NewThingPage() {
   const [city, setCity] = useState<string>('');
   const [start, setStart] = useState<string>('');
   const [end, setEnd] = useState<string>('');
-  const [thingImage, setThingImage] = useState<File | null>(null);
+  const [thingImages, setThingImages] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [typeIndex, setTypeIndex] = useState(0);
+  const [categoryIndex, setCategoryIndex] = useState(0);
 
   useEffect(() => {
     try {
@@ -117,7 +119,13 @@ export default function NewThingPage() {
         if (price) form.set('price', price);
         if (currencyCode) form.set('currencyCode', currencyCode);
       }
-      if (thingImage) form.set('thingImage', thingImage);
+      if (thingImages.length > 0) {
+        form.set('thingImage', thingImages[0]);
+        // Optionally include additional images; backend may ignore until supported
+        for (let i = 1; i < Math.min(thingImages.length, 5); i++) {
+          form.set(`thingImage${i+1}`, thingImages[i]);
+        }
+      }
 
       await createThing(form);
       setSuccess(true);
@@ -164,8 +172,15 @@ export default function NewThingPage() {
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={typeOpen}
-                onClick={()=>setTypeOpen((v)=>!v)}
+                onClick={()=>{ setTypeOpen((v)=>!v); setTypeIndex(['thing','store','event'].indexOf(type)); }}
                 className="relative w-full rounded border pl-9 pr-8 py-2 text-left hover:border-gray-400"
+                onKeyDown={(e)=>{
+                  const opts: ThingType[] = ['thing','store','event'];
+                  if (e.key === 'ArrowDown') { e.preventDefault(); setTypeOpen(true); setTypeIndex((i)=> (i+1) % opts.length); }
+                  if (e.key === 'ArrowUp') { e.preventDefault(); setTypeOpen(true); setTypeIndex((i)=> (i-1+opts.length)%opts.length); }
+                  if (e.key === 'Enter' && typeOpen) { e.preventDefault(); const id = (['thing','store','event'] as ThingType[])[typeIndex]; setType(id); setTypeOpen(false); }
+                  if (e.key === 'Escape') { setTypeOpen(false); }
+                }}
               >
                 <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
                   {type === 'store' ? (
@@ -187,7 +202,7 @@ export default function NewThingPage() {
                     { id: 'event', label: 'Event' },
                   ] as {id: ThingType; label: string}[]).map((opt)=> (
                     <li key={opt.id} role="option" aria-selected={type===opt.id}>
-                      <button type="button" onClick={()=>{ setType(opt.id); setTypeOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50">
+                      <button type="button" onClick={()=>{ setType(opt.id); setTypeOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 ${(['thing','store','event'] as ThingType[])[typeIndex]===opt.id?'bg-gray-50':''}`}>
                         <span className="text-gray-600">
                           {opt.id === 'store' ? (
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M16 22H8a4 4 0 0 1-4-4V9h20v9a4 4 0 0 1-4 4Z"/></svg>
@@ -213,8 +228,15 @@ export default function NewThingPage() {
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={categoryOpen}
-                onClick={()=>setCategoryOpen((v)=>!v)}
+                onClick={()=>{ setCategoryOpen((v)=>!v); const idx = Math.max(0, categories.findIndex(c=>c.name===category)); setCategoryIndex(idx); }}
                 className="relative w-full rounded border pl-9 pr-8 py-2 text-left hover:border-gray-400"
+                onKeyDown={(e)=>{
+                  const len = categories.length;
+                  if (e.key === 'ArrowDown') { e.preventDefault(); setCategoryOpen(true); setCategoryIndex((i)=> (i+1)%len); }
+                  if (e.key === 'ArrowUp') { e.preventDefault(); setCategoryOpen(true); setCategoryIndex((i)=> (i-1+len)%len); }
+                  if (e.key === 'Enter' && categoryOpen) { e.preventDefault(); const c = categories[categoryIndex]; setCategory(c?.name||''); setCategoryOpen(false); }
+                  if (e.key === 'Escape') { setCategoryOpen(false); }
+                }}
               >
                 <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
                   {category ? (
@@ -236,9 +258,9 @@ export default function NewThingPage() {
                       <span>None</span>
                     </button>
                   </li>
-                  {categories.map((c)=> (
+                  {categories.map((c, idx)=> (
                     <li key={c.id} role="option" aria-selected={category===c.name}>
-                      <button type="button" onClick={()=>{ setCategory(c.name); setCategoryOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50">
+                      <button type="button" onClick={()=>{ setCategory(c.name); setCategoryOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 ${categoryIndex===idx?'bg-gray-50':''}`}>
                         <Image src={`/categories/${c.name}.png`} alt="" width={16} height={16} />
                         <span>{c.displayName}</span>
                       </button>
@@ -281,8 +303,9 @@ export default function NewThingPage() {
           )}
 
           {showRange && (
-            <div className="sm:col-span-2">
+              <div className="sm:col-span-2">
               <label className="mb-1 block text-sm font-medium">Price Range</label>
+              <p className="-mt-1 mb-1 text-xs text-gray-500">Relative scale for stores (e.g., 1–5). Higher means more expensive.</p>
               <div className="relative">
                 <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14h6"/><path d="M14 10h6"/><path d="M4 18h16"/><path d="M4 6h16"/></svg>
@@ -296,6 +319,7 @@ export default function NewThingPage() {
             <>
               <div>
                 <label className="mb-1 block text-sm font-medium">Start</label>
+                <p className="-mt-1 mb-1 text-xs text-gray-500">Local time; adjust for your timezone if needed.</p>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -305,6 +329,7 @@ export default function NewThingPage() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">End</label>
+                <p className="-mt-1 mb-1 text-xs text-gray-500">Optional. Leave empty for open-ended events.</p>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -357,17 +382,28 @@ export default function NewThingPage() {
             </div>
           </div>
 
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium">Image</label>
-            <div className="flex items-center gap-3">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded border bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M20.4 14.5L16 10 4 22"/></svg>
-                <span>Upload image</span>
-                <input type="file" accept="image/*" className="hidden" onChange={(e)=>setThingImage(e.target.files?.[0] || null)} />
-              </label>
-              {thingImage && <span className="truncate text-xs text-gray-600" title={thingImage.name}>{thingImage.name}</span>}
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium">Image</label>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded border bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M20.4 14.5L16 10 4 22"/></svg>
+                  <span>Upload images</span>
+                  <input multiple type="file" accept="image/*" className="hidden" onChange={(e)=> setThingImages(Array.from(e.target.files || [])) } />
+                </label>
+                {thingImages.length>0 && <span className="truncate text-xs text-gray-600">{thingImages.length} selected</span>}
+              </div>
+              {thingImages.length>0 && (
+                <div className="flex flex-wrap gap-2">
+                  {thingImages.map((f, i)=> (
+                    <div key={i} className="relative h-16 w-16 overflow-hidden rounded border">
+                      <Image src={URL.createObjectURL(f)} alt="" width={64} height={64} className="h-16 w-16 object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+            </div>
         </div>
 
         {error && <div className="text-sm text-red-600">{error}</div>}
