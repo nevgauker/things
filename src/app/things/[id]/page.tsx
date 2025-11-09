@@ -3,6 +3,7 @@ import ThingOwnerSection from '@/components/ThingOwnerSection';
 import { symbolForCurrency } from '@/lib/money';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import ThingActions from '@/components/ThingActions';
 import MapView from '@/components/MapView';
 
@@ -50,10 +51,14 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
   const { id } = await params;
   // Protect route: require signed-in user
   try {
-    const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/api/auth/me`, { cache: 'no-store' });
-    if (!authRes.ok) {
-      redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
-    }
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth_token')?.value;
+    if (!token) redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
+    const authRes = await fetch(`/api/auth/me`, {
+      cache: 'no-store',
+      headers: { cookie: `auth_token=${encodeURIComponent(token)}` },
+    });
+    if (!authRes.ok) redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
   } catch {
     redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
   }
