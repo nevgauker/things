@@ -1,5 +1,6 @@
 "use client";
 import Image from 'next/image';
+import Link from 'next/link';
 import type { Thing } from '@/lib/api/types';
 import { useState } from 'react';
 
@@ -39,14 +40,20 @@ export default function HomeListSheet({ items, loading }: { items: Thing[]; load
             )}
             <ul className="divide-y">
               {items.map((t) => (
-                <li key={t.id} className="flex items-center gap-3 px-3 py-2">
-                  <div className="h-12 w-12 overflow-hidden rounded bg-gray-100">
-                    <Image src={t.imageUrl || '/placeholder.png'} alt="" width={48} height={48} className="h-12 w-12 object-cover" loading="lazy" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-gray-800">{t.name || 'Thing'}</div>
-                    <div className="truncate text-xs text-gray-600">{[t.category, t.city, t.country].filter(Boolean).join(' • ')}</div>
-                  </div>
+                <li key={t.id}>
+                  <Link
+                    href={t.id ? `/things/${t.id}` : '#'}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                    aria-label={`View ${t.name || 'item'}`}
+                  >
+                    <div className="h-12 w-12 overflow-hidden rounded bg-gray-100">
+                      <Image src={t.imageUrl || '/placeholder.png'} alt="" width={48} height={48} className="h-12 w-12 object-cover" loading="lazy" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-gray-800">{t.name || 'Thing'}</div>
+                      <div className="truncate text-xs text-gray-600">{[t.category, t.city, t.country].filter(Boolean).join(' • ')}</div>
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>
