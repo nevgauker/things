@@ -130,41 +130,65 @@ export default function NewThingPage() {
         <Link className="text-sm text-primary" href="/my">Back to My Things</Link>
       </div>
 
-      <form onSubmit={onSubmit} className="card space-y-4 p-4">
+      <form onSubmit={onSubmit} className="card space-y-5 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium">Name</label>
-            <input className="w-full rounded border px-3 py-2" value={name} onChange={(e)=>setName(e.target.value)} placeholder="Title" />
+            <div className="relative">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41L11 4a2 2 0 0 0-2.83 0L2 10.17a2 2 0 0 0 0 2.83L11.59 22a2 2 0 0 0 2.83 0l5.17-5.17a2 2 0 0 0 0-2.83Z"/><path d="M7 7h.01"/></svg>
+              </span>
+              <input className="w-full rounded border pl-9 pr-3 py-2" value={name} onChange={(e)=>setName(e.target.value)} placeholder="Title" />
+            </div>
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">Type</label>
-            <select className="w-full rounded border px-3 py-2" value={type} onChange={(e)=>setType(e.target.value as ThingType)}>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </span>
+              <select className="w-full rounded border pl-9 pr-3 py-2" value={type} onChange={(e)=>setType(e.target.value as ThingType)}>
               <option value="thing">Thing</option>
               <option value="store">Store</option>
               <option value="event">Event</option>
-            </select>
+              </select>
+            </div>
           </div>
 
           <div>
             <label className="mb-1 block text-sm font-medium">Category</label>
-            <select className="w-full rounded border px-3 py-2" value={category} onChange={(e)=>setCategory(e.target.value)}>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+              </span>
+              <select className="w-full rounded border pl-9 pr-3 py-2" value={category} onChange={(e)=>setCategory(e.target.value)}>
               <option value="">Select a category</option>
               {categories.map((c)=> (
                 <option key={c.id} value={c.name}>{c.displayName}</option>
               ))}
-            </select>
+              </select>
+            </div>
           </div>
 
           {showPrice && (
             <>
               <div>
                 <label className="mb-1 block text-sm font-medium">Price</label>
-                <input type="number" inputMode="decimal" step="any" className="w-full rounded border px-3 py-2" value={price} onChange={(e)=>setPrice(e.target.value)} placeholder="e.g. 25" />
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  </span>
+                  <input type="number" inputMode="decimal" step="any" className="w-full rounded border pl-9 pr-3 py-2" value={price} onChange={(e)=>setPrice(e.target.value)} placeholder="e.g. 25" />
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Currency</label>
-                <select className="w-full rounded border px-3 py-2" value={currencyCode} onChange={(e)=>setCurrencyCode(e.target.value)}>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                  </span>
+                  <select className="w-full rounded border pl-9 pr-3 py-2" value={currencyCode} onChange={(e)=>setCurrencyCode(e.target.value)}>
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
                   <option value="GBP">GBP (£)</option>
@@ -172,7 +196,8 @@ export default function NewThingPage() {
                   <option value="CAD">CAD (C$)</option>
                   <option value="JPY">JPY (¥)</option>
                   <option value="INR">INR (₹)</option>
-                </select>
+                  </select>
+                </div>
               </div>
             </>
           )}
@@ -180,7 +205,12 @@ export default function NewThingPage() {
           {showRange && (
             <div className="sm:col-span-2">
               <label className="mb-1 block text-sm font-medium">Price Range</label>
-              <input type="number" inputMode="numeric" step="1" className="w-full rounded border px-3 py-2" value={priceRange} onChange={(e)=>setPriceRange(e.target.value)} placeholder="e.g. 2 (relative scale)" />
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14h6"/><path d="M14 10h6"/><path d="M4 18h16"/><path d="M4 6h16"/></svg>
+                </span>
+                <input type="number" inputMode="numeric" step="1" className="w-full rounded border pl-9 pr-3 py-2" value={priceRange} onChange={(e)=>setPriceRange(e.target.value)} placeholder="e.g. 2 (relative scale)" />
+              </div>
             </div>
           )}
 
@@ -188,22 +218,42 @@ export default function NewThingPage() {
             <>
               <div>
                 <label className="mb-1 block text-sm font-medium">Start</label>
-                <input type="datetime-local" className="w-full rounded border px-3 py-2" value={start} onChange={(e)=>setStart(e.target.value)} />
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </span>
+                  <input type="datetime-local" className="w-full rounded border pl-9 pr-3 py-2" value={start} onChange={(e)=>setStart(e.target.value)} />
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">End</label>
-                <input type="datetime-local" className="w-full rounded border px-3 py-2" value={end} onChange={(e)=>setEnd(e.target.value)} />
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  </span>
+                  <input type="datetime-local" className="w-full rounded border pl-9 pr-3 py-2" value={end} onChange={(e)=>setEnd(e.target.value)} />
+                </div>
               </div>
             </>
           )}
 
           <div>
             <label className="mb-1 block text-sm font-medium">Latitude</label>
-            <input className="w-full rounded border px-3 py-2" value={latitude} onChange={(e)=>setLatitude(e.target.value)} placeholder="e.g. 37.7749" inputMode="decimal" enterKeyHint="done" />
+            <div className="relative">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s8-4.5 8-10a8 8 0 0 0-16 0c0 5.5 8 10 8 10Z"/><circle cx="12" cy="11" r="3"/></svg>
+              </span>
+              <input className="w-full rounded border pl-9 pr-3 py-2" value={latitude} onChange={(e)=>setLatitude(e.target.value)} placeholder="e.g. 37.7749" inputMode="decimal" enterKeyHint="done" />
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Longitude</label>
-            <input className="w-full rounded border px-3 py-2" value={longitude} onChange={(e)=>setLongitude(e.target.value)} placeholder="e.g. -122.4194" inputMode="decimal" enterKeyHint="done" />
+            <div className="relative">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s8-4.5 8-10a8 8 0 0 0-16 0c0 5.5 8 10 8 10Z"/><circle cx="12" cy="11" r="3"/></svg>
+              </span>
+              <input className="w-full rounded border pl-9 pr-3 py-2" value={longitude} onChange={(e)=>setLongitude(e.target.value)} placeholder="e.g. -122.4194" inputMode="decimal" enterKeyHint="done" />
+            </div>
           </div>
           <div className="sm:col-span-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <button type="button" className="btn-secondary w-full sm:w-auto" onClick={useCurrentLocation}>Use my current location</button>
@@ -212,16 +262,33 @@ export default function NewThingPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium">Country</label>
-            <input className="w-full rounded border px-3 py-2" value={country} onChange={(e)=>setCountry(e.target.value)} placeholder="Country" autoComplete="country" />
+            <div className="relative">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20"/></svg>
+              </span>
+              <input className="w-full rounded border pl-9 pr-3 py-2" value={country} onChange={(e)=>setCountry(e.target.value)} placeholder="Country" autoComplete="country" />
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">City</label>
-            <input className="w-full rounded border px-3 py-2" value={city} onChange={(e)=>setCity(e.target.value)} placeholder="City" autoComplete="address-level2" />
+            <div className="relative">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22V6a2 2 0 0 1 2-2h4"/><path d="M7 22V4h10a2 2 0 0 1 2 2v16"/><path d="M14 10h2"/><path d="M14 14h2"/><path d="M14 18h2"/></svg>
+              </span>
+              <input className="w-full rounded border pl-9 pr-3 py-2" value={city} onChange={(e)=>setCity(e.target.value)} placeholder="City" autoComplete="address-level2" />
+            </div>
           </div>
 
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium">Image</label>
-            <input type="file" accept="image/*" onChange={(e)=>setThingImage(e.target.files?.[0] || null)} />
+            <div className="flex items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded border bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M20.4 14.5L16 10 4 22"/></svg>
+                <span>Upload image</span>
+                <input type="file" accept="image/*" className="hidden" onChange={(e)=>setThingImage(e.target.files?.[0] || null)} />
+              </label>
+              {thingImage && <span className="truncate text-xs text-gray-600" title={thingImage.name}>{thingImage.name}</span>}
+            </div>
           </div>
         </div>
 
