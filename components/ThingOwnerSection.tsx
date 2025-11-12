@@ -50,9 +50,29 @@ export default function ThingOwnerSection({
   const isOwner = !!(me?.id && ownerId && me.id === ownerId);
   const canManage = isOwner || !!me?.isAdmin;
   const [chatOpen, setChatOpen] = useState(false);
+  const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(null);
   const [vis, setVis] = useState<typeof privacyVisibility | undefined>(privacyVisibility);
   const [radius, setRadius] = useState<number>(Math.max(1, Math.round((privacyRadiusKm || 2))));
   const [approveUserId, setApproveUserId] = useState('');
+  const [conversations, setConversations] = useState<Array<{ id: string; otherUser?: any; lastMessage?: any }>>([]);
+  const [loadingConvs, setLoadingConvs] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadConvs() {
+      if (!isOwner) return;
+      try {
+        setLoadingConvs(true);
+        const res = await api.get(`/api/things/${thingId}/conversations`);
+        if (!cancelled) setConversations(res.data.conversations || []);
+      } catch {
+        if (!cancelled) setConversations([]);
+      } finally {
+        if (!cancelled) setLoadingConvs(false);
+      }
+    }
+    loadConvs();
+  }, [isOwner, thingId]);
 
   async function onDelete() {
     if (!canManage) return;
@@ -83,7 +103,7 @@ export default function ThingOwnerSection({
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {!isOwner && (
-          <button className="btn-primary" onClick={() => setChatOpen(true)}>Message Seller</button>
+          <button className="btn-primary" onClick={() => { setSelectedChatUserId(String(ownerId)); setChatOpen(true); }}>Message Seller</button>
         )}
         {canManage && (
           <>
@@ -97,6 +117,32 @@ export default function ThingOwnerSection({
           </>
         )}
       </div>
+      {isOwner && (
+        <div className="mt-4 rounded-lg border bg-white p-3">
+          <div className="mb-2 text-sm font-semibold text-gray-700">Messages</div>
+          {loadingConvs && <div className="text-sm text-gray-500">Loading…</div>}
+          {!loadingConvs && conversations.length === 0 && (
+            <div className="text-sm text-gray-600">No messages yet.</div>
+          )}
+          <div className="divide-y">
+            {conversations.map((c) => (
+              <button
+                key={c.id}
+                className="flex w-full items-center gap-3 py-2 text-left hover:bg-gray-50"
+                onClick={() => { setSelectedChatUserId(String(c.otherUser?.id || '')); setChatOpen(true); }}
+              >
+                <Image src={c.otherUser?.userAvatar || '/avatar.png'} alt="" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
+                <div className="min-w-0">
+                  <div className="truncate text-sm text-gray-800">{c.otherUser?.name || c.otherUser?.id || 'Unknown user'}</div>
+                  {c.lastMessage && (
+                    <div className="truncate text-xs text-gray-500">{c.lastMessage.text}</div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {isOwner && (
         <div className="mt-4 rounded-lg border bg-white p-3">
           <div className="mb-2 text-sm font-semibold text-gray-700">Approve exact location for a user</div>
@@ -127,7 +173,9 @@ export default function ThingOwnerSection({
       )}
       {/* Visibility UI removed per simplification; approvals now control exact access */}
       {/* Lightweight in-app chat modal. Replace with real backend when available. */}
-      <ChatDialog open={chatOpen} onClose={() => setChatOpen(false)} withUserId={String(ownerId || '')} thingId={thingId} />
+      {selectedChatUserId && (
+        <ChatDialog open={chatOpen} onClose={() => setChatOpen(false)} withUserId={selectedChatUserId} thingId={thingId} />
+      )}
     </div>
   );
 }

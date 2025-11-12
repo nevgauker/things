@@ -60,7 +60,9 @@ export async function GET(req: Request, context: any) {
   const safe: any = {
     id: thing.id,
     name: thing.name,
-    images: (thing as any).images ?? (thing as any).imageUrl ? [(thing as any).imageUrl] : [],
+    images: Array.isArray((thing as any).images) && (thing as any).images.length
+      ? (thing as any).images
+      : ((thing as any).imageUrl ? [(thing as any).imageUrl] : []),
     type: thing.type,
     category: thing.category,
     price: thing.price,
