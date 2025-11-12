@@ -6,13 +6,89 @@ import { verifyAuth } from '@/server/auth';
 import { z } from '@/server/validate';
 import { rateLimit } from '@/server/rateLimit';
 
-export async function GET(_: Request, context: any) {
+// Compute an obfuscated/approximate center from precise coordinates
+function approximateCenter(lat?: number | null, lng?: number | null, radiusKm = 2) {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  // Round to ~1km grid by 2 decimals (~1.1km at equator). Keep radius to hint the area.
+  const round = (n: number, d = 2) => Math.round(n * Math.pow(10, d)) / Math.pow(10, d);
+  return { center: { lat: round(lat, 2), lng: round(lng, 2) }, radiusKm } as const;
+}
+
+type PrivacyConfig = { visibility: 'public_km' | 'verified_only' | 'hidden_until_contact'; radiusKm: number };
+function privacyFromThing(t: any): PrivacyConfig {
+  const fallback: PrivacyConfig = { visibility: 'public_km', radiusKm: 2 };
+  try {
+    const cfg = (t?.googleData?.privacy as PrivacyConfig) || fallback;
+    return {
+      visibility: (cfg.visibility as any) || 'public_km',
+      radiusKm: typeof cfg.radiusKm === 'number' && cfg.radiusKm > 0 ? cfg.radiusKm : 2,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export async function GET(req: Request, context: any) {
+  const auth = verifyAuth(req);
   const thing = await prisma.thing.findUnique({
     where: { id: String(context?.params?.id || '') },
-    include: { owner: { select: { id: true, name: true, email: true, userAvatar: true } } },
+    include: { owner: { select: { id: true, name: true, userAvatar: true } } },
   });
   if (!thing) return NextResponse.json({ error: 'Could not fetch thing' }, { status: 404 });
-  return NextResponse.json({ thing, message: 'Fetching thing successful' });
+
+  const privacy = privacyFromThing(thing);
+  const isOwner = !!(auth?.userId && thing.ownerId && auth.userId === thing.ownerId);
+  const PRIVACY_DISABLED =
+    process.env.NEXT_PUBLIC_DISABLE_PRIVACY === 'true' ||
+    process.env.NEXT_PUBLIC_DISABLE_PRIVACY === '1';
+  // Exact coordinates allowed if owner or approved viewer; otherwise serve approximate.
+  let approved = false;
+  if (auth?.userId && !isOwner) {
+    try {
+      const a = await prisma.thingAccessApproval.findUnique({
+        where: { thingId_viewerId: { thingId: String(context?.params?.id || ''), viewerId: auth.userId } },
+      });
+      approved = !!a;
+    } catch {}
+  }
+  const allowExact = isOwner || approved;
+  const allowApprox = true; // always allow approximate for all viewers
+
+  const approx = allowApprox ? approximateCenter((thing as any).latitude, (thing as any).longitude, privacy.radiusKm) : null;
+
+  // Build a privacy-safe payload. Do not include exact lat/lng or owner private data.
+  const safe: any = {
+    id: thing.id,
+    name: thing.name,
+    images: (thing as any).images ?? (thing as any).imageUrl ? [(thing as any).imageUrl] : [],
+    type: thing.type,
+    category: thing.category,
+    price: thing.price,
+    currencyCode: thing.currencyCode,
+    priceRange: thing.priceRange,
+    city: thing.city,
+    country: thing.country,
+    status: thing.status,
+    start: thing.start,
+    end: thing.end,
+    ownerImageUrl: (thing as any).ownerImageUrl,
+    ownerId: thing.ownerId,
+    owner: thing.owner ? { id: thing.owner.id, name: thing.owner.name, userAvatar: thing.owner.userAvatar } : null,
+    fromGoogle: thing.fromGoogle,
+    googleData: undefined, // strip google raw data by default
+    approximateCenter: approx?.center || null,
+    approximateRadiusKm: approx?.radiusKm || null,
+    visibility: privacy.visibility,
+    canNavigate: allowExact,
+    exactCenter: allowExact && typeof (thing as any).latitude === 'number' && typeof (thing as any).longitude === 'number'
+      ? { lat: (thing as any).latitude as number, lng: (thing as any).longitude as number }
+      : null,
+  };
+
+  // If owner is viewing, they can see their own Google metadata for management purposes (still omit precise coords here)
+  if (isOwner) safe.googleData = (thing as any).googleData || undefined;
+
+  return NextResponse.json({ thing: safe, message: 'Fetching thing successful' });
 }
 
 export async function PATCH(req: Request, context: any) {
@@ -41,6 +117,20 @@ export async function PATCH(req: Request, context: any) {
   if (latStr && lngStr) {
     data.latitude = Number(latStr);
     data.longitude = Number(lngStr);
+  }
+
+  // Optional privacy settings stored inside googleData. This avoids schema migrations.
+  const visibility = form.get('visibility');
+  const visibilityRadiusKm = form.get('visibilityRadiusKm');
+  if (visibility || visibilityRadiusKm) {
+    const currentPrivacy = ((data.googleData as any)?.privacy) || {};
+    const next: any = { ...currentPrivacy };
+    if (typeof visibility === 'string') next.visibility = visibility;
+    if (typeof visibilityRadiusKm === 'string') {
+      const n = Number(visibilityRadiusKm);
+      if (Number.isFinite(n) && n > 0) next.radiusKm = n;
+    }
+    (data as any).googleData = { ...((data as any).googleData || {}), privacy: next };
   }
 
   let uploads: string[] = [];
@@ -101,6 +191,9 @@ export async function PATCH(req: Request, context: any) {
     priceRange: z.number().nonnegative().optional(),
     latitude: z.number().gte(-90).lte(90).optional(),
     longitude: z.number().gte(-180).lte(180).optional(),
+    // Accept privacy inputs (validated loosely; stored within googleData)
+    visibility: z.string().optional(),
+    visibilityRadiusKm: z.number().positive().optional(),
   });
   const parsed = schema.safeParse(data);
   if (!parsed.success) return NextResponse.json({ message: 'Invalid input' }, { status: 400 });

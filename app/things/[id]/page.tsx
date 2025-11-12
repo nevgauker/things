@@ -4,7 +4,7 @@ import ThingImageGallery from '@/components/ThingImageGallery';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { symbolForCurrency } from '@/lib/money';
-import MapView from '@/components/MapView';
+import ApproximateMap from '@/components/ApproximateMap';
 import ThingOwnerSection from '@/components/ThingOwnerSection';
 import ThingActions from '@/components/ThingActions';
 import DistanceIndicator from '@/components/DistanceIndicator';
@@ -25,9 +25,11 @@ type Thing = {
   start?: string;
   end?: string;
   ownerImageUrl?: string;
-  latitude?: number;
-  longitude?: number;
-  position?: { type: 'Point'; coordinates: [number, number] };
+  // Exact coords intentionally omitted in API for privacy
+  approximateCenter?: { lat: number; lng: number } | null;
+  approximateRadiusKm?: number | null;
+  canNavigate?: boolean;
+  exactCenter?: { lat: number; lng: number } | null;
   ownerId?: string | null;
   owner?: { id: string; name?: string | null; email?: string; userAvatar?: string | null } | null;
   fromGoogle?: boolean;
@@ -52,13 +54,18 @@ async function getThing(id: string): Promise<Thing | null> {
 
 export default async function ThingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // Protect route: require signed-in user
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('auth_token')?.value;
-    if (!token) redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
-  } catch {
-    redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
+  // Conditionally require sign-in unless privacy is globally disabled via env
+  const PRIVACY_DISABLED =
+    process.env.NEXT_PUBLIC_DISABLE_PRIVACY === 'true' ||
+    process.env.NEXT_PUBLIC_DISABLE_PRIVACY === '1';
+  if (!PRIVACY_DISABLED) {
+    try {
+      const cookieStore = await cookies();
+      const token = cookieStore.get('auth_token')?.value;
+      if (!token) redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
+    } catch {
+      redirect(`/signin?next=/things/${encodeURIComponent(id)}`);
+    }
   }
   const thing = await getThing(id);
   if (!thing) {
@@ -70,13 +77,9 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
     );
   }
 
-  // Derive coordinates if only GeoJSON provided
-  const derivedLat = typeof thing.latitude === 'number'
-    ? thing.latitude
-    : Array.isArray(thing.position?.coordinates) ? thing.position!.coordinates[1] : undefined;
-  const derivedLng = typeof thing.longitude === 'number'
-    ? thing.longitude
-    : Array.isArray(thing.position?.coordinates) ? thing.position!.coordinates[0] : undefined;
+  // Use approximate center provided by API. No exact coordinates are exposed client-side.
+  const approx = thing.approximateCenter || null;
+  const exact = (thing as any).exactCenter || null;
 
   const rating = thing.googleData?.rating;
   const ratingsTotal = thing.googleData?.user_ratings_total;
@@ -103,7 +106,13 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
               <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700">Google</span>
             )}
           </div>
-          <DistanceIndicator ownerId={thing.ownerId as any} lat={derivedLat} lng={derivedLng} />
+          <DistanceIndicator ownerId={thing.ownerId as any} lat={approx?.lat as any} lng={approx?.lng as any} />
+          {(thing.city || thing.country) && (
+            <div className="inline-flex items-center gap-2 rounded-full border bg-white/90 px-3 py-1 text-xs text-gray-700 shadow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 6-9 13-9 13S3 16 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Near {[thing.city, thing.country].filter(Boolean).join(', ')}</span>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
             {thing.type && <span className="rounded bg-indigo-100 px-2 py-0.5 text-xs uppercase text-indigo-700">{thing.type}</span>}
             {thing.category && <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{thing.category}</span>}
@@ -120,47 +129,47 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
             {thing.type === 'store' && thing.priceRange != null && (
               <div className="text-sm"><span className="text-gray-500">Price Range:</span> <span className="font-medium">{thing.priceRange}</span></div>
             )}
-            {(thing.city || thing.country) && (
-              <div className="text-sm"><span className="text-gray-500">Location:</span> <span className="font-medium">{[thing.city, thing.country].filter(Boolean).join(', ')}</span></div>
-            )}
+            {/* City/Country already shown above in a privacy-preserving manner */}
             {thing.type === 'event' && (thing.start || thing.end) && (
               <div className="text-sm text-gray-700">
                 {thing.start && <span>Start: {new Date(thing.start).toLocaleString()}</span>}
                 {thing.end && <span className="ml-2">End: {new Date(thing.end).toLocaleString()}</span>}
               </div>
             )}
-            {(derivedLat != null && derivedLng != null) && (
-              <div className="text-sm text-gray-600">Coords: {derivedLat.toFixed(5)}, {derivedLng.toFixed(5)}</div>
-            )}
-            {(derivedLat != null && derivedLng != null) && (
-              <div>
-                <a
-                  className="btn-secondary text-sm"
-                  href={`https://www.google.com/maps?q=${encodeURIComponent(`${derivedLat},${derivedLng}`)}`}
-                  target="_blank" rel="noopener noreferrer"
-                >
-                  Open in Google Maps
-                </a>
-              </div>
-            )}
+            {/* No exact coordinates or external map links to protect privacy */}
           </div>
 
-          <ThingOwnerSection ownerId={thing.ownerId as any} owner={thing.owner as any} fallbackAvatar={thing.ownerImageUrl as any} thingId={thing.id} />
+          <ThingOwnerSection
+            ownerId={thing.ownerId as any}
+            owner={thing.owner as any}
+            fallbackAvatar={thing.ownerImageUrl as any}
+            thingId={thing.id}
+            privacyVisibility={(thing as any).visibility}
+            privacyRadiusKm={(thing as any).approximateRadiusKm as any}
+          />
           <ThingActions thingId={thing.id} ownerId={thing.ownerId as any} thingName={thing.name || null} />
         </div>
       </div>
 
-      <div className="mt-6">
-        <MapView
-          className="h-64 md:h-80"
-          items={[{ ...thing, latitude: derivedLat as any, longitude: derivedLng as any } as any]}
-          fitToItems
-          showLegend={false}
-          showLocateButton={false}
-          showUserLocation={false}
-          interactive={false}
-        />
-      </div>
+      {approx && !thing.canNavigate && (
+        <div className="mt-6">
+          <ApproximateMap className="h-64 md:h-80" center={approx as any} radiusKm={(thing as any).approximateRadiusKm || 2} />
+        </div>
+      )}
+      {thing.canNavigate && exact && (
+        <div className="mt-6 space-y-2">
+          <div>
+            <a
+              className="btn-primary"
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(exact.lat))},${encodeURIComponent(String(exact.lng))}`}
+              target="_blank" rel="noopener noreferrer"
+            >
+              Open in Google Maps
+            </a>
+          </div>
+          <ApproximateMap className="h-64 md:h-80" center={exact as any} radiusKm={0.1} interactive={true} />
+        </div>
+      )}
     </div>
   );
 }

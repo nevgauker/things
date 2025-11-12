@@ -46,6 +46,9 @@ export default function MapView({
   showLocateButton = true,
   showLegend = true,
   interactive = true,
+  externalCenter,
+  externalBounds,
+  externalZoom,
 }: {
   className?: string;
   onBoundsChanged?: (b: Bounds) => void;
@@ -55,6 +58,10 @@ export default function MapView({
   showLocateButton?: boolean;
   showLegend?: boolean;
   interactive?: boolean;
+  // If provided, the map will center/fit accordingly (e.g., from search geocode)
+  externalCenter?: { lat: number; lng: number } | null;
+  externalBounds?: Bounds | null;
+  externalZoom?: number;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -163,10 +170,16 @@ export default function MapView({
             if (!bounds) return;
             const ne = bounds.getNorthEast();
             const sw = bounds.getSouthWest();
-            onBoundsChanged({
+            const payload = {
               northeast: { lat: ne.lat(), lng: ne.lng() },
               southwest: { lat: sw.lat(), lng: sw.lng() },
-            });
+            };
+            try {
+              if (typeof window !== 'undefined') {
+                console.debug('[MapView] emitBounds', payload);
+              }
+            } catch {}
+            onBoundsChanged(payload);
           }, 150);
         };
 
@@ -322,6 +335,30 @@ export default function MapView({
       }
     }
   }, [items, fitToItems, mapReady]);
+
+  // Apply external search-driven center/bounds when provided
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !window.google?.maps) return;
+    // Prefer bounds if available, otherwise center+zoom
+    if (externalBounds) {
+      try {
+        const ne = new window.google.maps.LatLng(externalBounds.northeast.lat, externalBounds.northeast.lng);
+        const sw = new window.google.maps.LatLng(externalBounds.southwest.lat, externalBounds.southwest.lng);
+        const b = new window.google.maps.LatLngBounds(sw, ne);
+        mapRef.current.fitBounds(b, 40);
+        hasCenteredOnUserRef.current = true;
+      } catch {}
+      return;
+    }
+    if (externalCenter) {
+      try {
+        mapRef.current.setCenter(externalCenter);
+        const z = typeof externalZoom === 'number' ? externalZoom : 13;
+        mapRef.current.setZoom(z);
+        hasCenteredOnUserRef.current = true;
+      } catch {}
+    }
+  }, [externalBounds, externalCenter, externalZoom, mapReady]);
 
   // Locate user again
   const recenterOnUser = () => {

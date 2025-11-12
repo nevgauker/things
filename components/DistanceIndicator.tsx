@@ -41,8 +41,8 @@ export default function DistanceIndicator({ ownerId, lat, lng }: { ownerId?: str
   let icon: ReactElement | null = null;
   if (distanceKm != null) {
     const km = distanceKm;
-    if (km < 1) label = `${Math.round(km * 1000)} m away`;
-    else if (km < 10) label = `${km.toFixed(1)} km away`;
+    // Privacy-friendly: show km with limited precision only
+    if (km < 10) label = `${km.toFixed(1)} km away`;
     else label = `${Math.round(km)} km away`;
     if (km <= 1.2) {
       icon = (

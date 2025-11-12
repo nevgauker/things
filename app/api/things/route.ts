@@ -37,7 +37,15 @@ export async function GET(req: NextRequest) {
     ];
   }
 
-  const things = await prisma.thing.findMany({ where, orderBy: { createdAt: 'desc' } });
+  const rows = await prisma.thing.findMany({ where, orderBy: { createdAt: 'desc' } });
+  // Always return estimated coordinates on the main map (rounded ~1km)
+  const round = (n: number | null | undefined, d = 2) =>
+    typeof n === 'number' ? Math.round(n * Math.pow(10, d)) / Math.pow(10, d) : n;
+  const things = rows.map((t: any) => ({
+    ...t,
+    latitude: round(t.latitude, 2),
+    longitude: round(t.longitude, 2),
+  }));
   return NextResponse.json({ things, message: 'Fetching things successful' });
 }
 
@@ -63,6 +71,8 @@ export async function POST(req: NextRequest) {
   const start = form.get('start') as string | null;
   const end = form.get('end') as string | null;
   const priceRange = form.get('priceRange') as string | null;
+  const visibility = form.get('visibility') as string | null;
+  const visibilityRadiusKm = form.get('visibilityRadiusKm') as string | null;
 
   const schema = z.object({
     name: z.string().min(1).max(200),
@@ -77,8 +87,10 @@ export async function POST(req: NextRequest) {
     start: z.string().optional().nullable(),
     end: z.string().optional().nullable(),
     priceRange: z.coerce.number().nonnegative().optional(),
+    visibility: z.string().optional(),
+    visibilityRadiusKm: z.coerce.number().positive().optional(),
   });
-  const parsed = schema.safeParse({ name, type, latitude, longitude, category, price, currencyCode, country, city, start, end, priceRange });
+  const parsed = schema.safeParse({ name, type, latitude, longitude, category, price, currencyCode, country, city, start, end, priceRange, visibility, visibilityRadiusKm });
   if (!parsed.success) {
     try {
       const issues: any[] = (parsed as any).error?.issues || [];
@@ -154,6 +166,14 @@ export async function POST(req: NextRequest) {
     currencyCode: type !== 'store' ? (currencyCode ? String(currencyCode).toUpperCase() : undefined) : undefined,
     fromGoogle: false,
   };
+  // Store privacy inside googleData. No schema changes needed.
+  const priv: any = {};
+  if (visibility) priv.visibility = visibility;
+  if (visibilityRadiusKm) {
+    const n = Number(visibilityRadiusKm);
+    if (Number.isFinite(n) && n > 0) priv.radiusKm = n;
+  }
+  if (Object.keys(priv).length) createData.googleData = { ...(createData.googleData || {}), privacy: priv };
   const thing = await prisma.thing.create({ data: createData });
 
   return NextResponse.json({ thing }, { status: 201 });

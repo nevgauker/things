@@ -27,17 +27,23 @@ model User {
   updatedAt         DateTime @updatedAt
 
   things Thing[]
-
-  PasswordReset PasswordReset[]
+  // Conversation membership via participants join
+  conversationParticipants ConversationParticipant[]
+  // Messages sent by this user
+  messages Message[]
+  // Password reset requests
+  passwordResets PasswordReset[]
+  // Exact location approvals where this user is the approved viewer
+  thingAccessApprovals ThingAccessApproval[] @relation("UserApprovals")
 }
 
 model Thing {
-  id            String   @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String?
   type          String?
   category      String?
   ownerId       String?
-  owner         User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  owner         User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   ownerImageUrl String?
   imageUrl      String?
   images        Json?
@@ -51,12 +57,62 @@ model Thing {
   priceRange    Float?
   latitude      Float?
   longitude     Float?
-  fromGoogle    Boolean  @default(false)
+  fromGoogle    Boolean        @default(false)
   googleData    Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  conversations Conversation[]
+  // Exact location approvals for this thing
+  accessApprovals ThingAccessApproval[] @relation("ThingApprovals")
 
   @@index([latitude, longitude])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  thingId   String
+  thing     Thing    @relation(fields: [thingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages     Message[]
+  participants ConversationParticipant[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text           String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model ConversationParticipant {
+  id             String        @id @default(cuid())
+  conversationId String
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model ThingAccessApproval {
+  id         String   @id @default(cuid())
+  thingId    String
+  thing      Thing    @relation("ThingApprovals", fields: [thingId], references: [id], onDelete: Cascade)
+  viewerId   String
+  viewer     User     @relation("UserApprovals", fields: [viewerId], references: [id], onDelete: Cascade)
+  approvedAt DateTime @default(now())
+
+  @@unique([thingId, viewerId])
+  @@index([viewerId])
 }
 
 model PasswordReset {

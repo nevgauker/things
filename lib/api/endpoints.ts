@@ -24,7 +24,19 @@ export async function fetchThings(params: {
     qs.set('swLat', String(params.bounds.southwest.lat));
     qs.set('swLng', String(params.bounds.southwest.lng));
   }
-  const res = await api.get<FetchThingsResponse>(`/api/things?${qs.toString()}`);
+  const url = `/api/things?${qs.toString()}`;
+  try {
+    if (typeof window !== 'undefined') {
+      // Debug: log outgoing request
+      console.debug('[fetchThings] GET', url, { params });
+    }
+  } catch {}
+  const res = await api.get<FetchThingsResponse>(url);
+  try {
+    if (typeof window !== 'undefined') {
+      console.debug('[fetchThings] OK', { count: res.data?.things?.length ?? 0 });
+    }
+  } catch {}
   return res.data;
 }
 

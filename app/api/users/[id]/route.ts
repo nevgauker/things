@@ -3,10 +3,19 @@ import { prisma } from '@/server/prisma';
 import { uploadImageFromFormData } from '@/server/upload';
 import { verifyAuth } from '@/server/auth';
 
-export async function GET(_: Request, context: any) {
-  const user = await prisma.user.findUnique({ where: { id: context?.params?.id } });
+export async function GET(req: Request, context: any) {
+  const auth = verifyAuth(req);
+  const user = await prisma.user.findUnique({ where: { id: String(context?.params?.id || '') } });
   if (!user) return NextResponse.json({ error: 'Could not fetch user' }, { status: 404 });
-  return NextResponse.json({ user, message: 'Fetching user successful' });
+  const isOwner = !!(auth?.userId && auth.userId === user.id);
+  const requester = auth?.userId ? await prisma.user.findUnique({ where: { id: auth.userId } }) : null;
+  const isAdmin = requester?.isAdmin === true;
+
+  // Expose only safe public fields unless owner/admin.
+  const safeUser: any = isOwner || isAdmin
+    ? user
+    : { id: user.id, name: user.name, userAvatar: user.userAvatar, preferredCurrency: user.preferredCurrency };
+  return NextResponse.json({ user: safeUser, message: 'Fetching user successful' });
 }
 
 export async function PATCH(req: Request, context: any) {
@@ -52,4 +61,3 @@ export async function DELETE(req: Request, context: any) {
   await prisma.user.delete({ where: { id: targetUserId } });
   return NextResponse.json({ message: 'User was deleted' });
 }
-
