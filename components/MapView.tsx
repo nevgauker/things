@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import type { Bounds, Thing } from "@/lib/api/types";
 import { symbolForCurrency } from "@/lib/money";
@@ -74,6 +75,9 @@ export default function MapView({
   const [legendOpen, setLegendOpen] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [ariaMessage, setAriaMessage] = useState<string>("");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Close legend on mobile
   useEffect(() => {
@@ -387,6 +391,15 @@ export default function MapView({
             },
           });
         }
+        // Also clear search & placeId in URL and set recenter=user to let Header clear/close autocomplete
+        try {
+          const sp = new URLSearchParams((searchParams && searchParams.toString()) || '');
+          sp.delete('search');
+          sp.delete('placeId');
+          sp.set('recenter', 'user');
+          const s = sp.toString();
+          router.push((`${pathname}?${s}`) as any);
+        } catch {}
       },
       () => { },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
