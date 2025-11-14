@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     include: { participants: true },
   });
   if (!conv || conv.participants.length !== 2) {
-    conv = await prisma.conversation.create({ data: { thingId } });
+    conv = await prisma.conversation.create({ data: { thingId }, include: { participants: true } });
     await prisma.conversationParticipant.createMany({
       data: [
         { conversationId: conv.id, userId: auth.userId },
