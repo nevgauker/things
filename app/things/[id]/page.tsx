@@ -139,6 +139,10 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
             {/* No exact coordinates or external map links to protect privacy */}
           </div>
 
+          <div className="pt-2">
+            <ThingActions thingId={thing.id} ownerId={thing.ownerId as any} thingName={thing.name || null} />
+          </div>
+
           <ThingOwnerSection
             ownerId={thing.ownerId as any}
             owner={thing.owner as any}
@@ -147,7 +151,19 @@ export default async function ThingDetailsPage({ params }: { params: Promise<{ i
             privacyVisibility={(thing as any).visibility}
             privacyRadiusKm={(thing as any).approximateRadiusKm as any}
           />
-          <ThingActions thingId={thing.id} ownerId={thing.ownerId as any} thingName={thing.name || null} />
+
+          <div className="rounded-lg border bg-white p-3 text-sm text-gray-700">
+            <div className="mb-2 font-semibold">Trust & Privacy</div>
+            <ul className="space-y-1 text-xs text-gray-600">
+              <li>Location shown is approximate by default.</li>
+              {thing.canNavigate ? (
+                <li>Exact location is available for navigation.</li>
+              ) : (
+                <li>Exact location is hidden until explicitly allowed.</li>
+              )}
+              {thing.fromGoogle && <li>Source: Google Places.</li>}
+            </ul>
+          </div>
         </div>
       </div>
 

@@ -50,6 +50,8 @@ export default function MapView({
   externalCenter,
   externalBounds,
   externalZoom,
+  selectedId,
+  onMarkerSelect,
 }: {
   className?: string;
   onBoundsChanged?: (b: Bounds) => void;
@@ -63,10 +65,13 @@ export default function MapView({
   externalCenter?: { lat: number; lng: number } | null;
   externalBounds?: Bounds | null;
   externalZoom?: number;
+  selectedId?: string | null;
+  onMarkerSelect?: (id: string) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<Array<{ id: string; marker: any; category?: string | null }>>([]);
+  const selectedMarkerRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
   const hasCenteredOnUserRef = useRef(false);
   const pendingCenterRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -87,15 +92,15 @@ export default function MapView({
   }, []);
 
   // Category marker icon
-  function markerIconForCategory(category?: string) {
+  function markerIconForCategory(category?: string, size = 28) {
     const c = String(category || "other").toLowerCase();
     const known = new Set(categories.map((k) => k.name));
     const file = known.has(c) ? c : "other";
     const url = `/categories/${file}.png`;
     return {
       url,
-      scaledSize: new window.google.maps.Size(28, 28),
-      anchor: new window.google.maps.Point(14, 14),
+      scaledSize: new window.google.maps.Size(size, size),
+      anchor: new window.google.maps.Point(size / 2, size / 2),
     } as any;
   }
 
@@ -232,7 +237,7 @@ export default function MapView({
     if (!items || !mapRef.current || !window.google?.maps || !mapReady) return;
 
     // Clear old markers
-    for (const m of markersRef.current) m.setMap(null);
+    for (const m of markersRef.current) m.marker.setMap(null);
     markersRef.current = [];
     clustererRef.current?.clearMarkers?.();
     clustererRef.current = null;
@@ -301,10 +306,14 @@ export default function MapView({
             }
             infoWindowRef.current.setContent(contentHtml);
             infoWindowRef.current.open({ map: mapRef.current, anchor: marker });
+            if (id && onMarkerSelect) onMarkerSelect(String(id));
           });
         }
 
         newMarkers.push(marker);
+        if (id) {
+          markersRef.current.push({ id: String(id), marker, category: (t as any).category || null });
+        }
         bounds.extend(marker.getPosition());
         if (!firstPoint) firstPoint = { lat: lat as number, lng: lng as number };
         added++;
@@ -324,7 +333,6 @@ export default function MapView({
         } catch {
           for (const m of newMarkers) {
             m.setMap(mapRef.current);
-            markersRef.current.push(m);
           }
         }
       })();
@@ -339,6 +347,33 @@ export default function MapView({
       }
     }
   }, [items, fitToItems, mapReady]);
+
+  // Highlight selected marker (from list hover/click)
+  useEffect(() => {
+    if (!window.google?.maps) return;
+    if (!selectedId) {
+      const prev = markersRef.current.find((m) => m.marker === selectedMarkerRef.current);
+      if (prev) {
+        prev.marker.setIcon(markerIconForCategory(prev.category || undefined, 28));
+        prev.marker.setZIndex(undefined);
+      }
+      selectedMarkerRef.current = null;
+      return;
+    }
+    if (!markersRef.current.length) return;
+    const entry = markersRef.current.find((m) => m.id === selectedId);
+    if (!entry) return;
+    if (selectedMarkerRef.current && selectedMarkerRef.current !== entry.marker) {
+      const prev = markersRef.current.find((m) => m.marker === selectedMarkerRef.current);
+      if (prev) {
+        prev.marker.setIcon(markerIconForCategory(prev.category || undefined, 28));
+        prev.marker.setZIndex(undefined);
+      }
+    }
+    entry.marker.setIcon(markerIconForCategory(entry.category || undefined, 36));
+    entry.marker.setZIndex(999);
+    selectedMarkerRef.current = entry.marker;
+  }, [selectedId, mapReady]);
 
   // Apply external search-driven center/bounds when provided
   useEffect(() => {

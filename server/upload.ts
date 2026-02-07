@@ -10,7 +10,16 @@ export async function uploadImageFromFormData(formData: FormData, key: string, f
 
   return new Promise<string>((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder: folderPath, resource_type: 'image', use_filename: true, filename_override: filename },
+      {
+        folder: folderPath,
+        resource_type: 'image',
+        use_filename: true,
+        filename_override: filename,
+        transformation: [
+          { width: 1600, height: 1600, crop: 'limit' },
+          { quality: 'auto', fetch_format: 'auto' },
+        ],
+      },
       (err, result) => {
         if (err || !result) return reject(err);
         resolve(result.secure_url);
@@ -19,4 +28,3 @@ export async function uploadImageFromFormData(formData: FormData, key: string, f
     stream.end(buffer);
   });
 }
-

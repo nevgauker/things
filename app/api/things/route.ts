@@ -4,14 +4,22 @@ import { uploadImageFromFormData } from '@/server/upload';
 import { verifyAuth } from '@/server/auth';
 import { z } from '@/server/validate';
 import { rateLimit } from '@/server/rateLimit';
+import { logError, logInfo } from '@/server/observability';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
+  const PRIVACY_DISABLED =
+    process.env.NEXT_PUBLIC_DISABLE_PRIVACY === 'true' ||
+    process.env.NEXT_PUBLIC_DISABLE_PRIVACY === '1';
   const ownerId = searchParams.get('ownerId') || undefined;
   const search = searchParams.get('search') || undefined;
   const categoryParam = searchParams.get('category') || undefined;
   const type = searchParams.get('type') || undefined;
   const status = searchParams.get('status') || undefined;
+  const priceMin = parseFloat(searchParams.get('priceMin') || '');
+  const priceMax = parseFloat(searchParams.get('priceMax') || '');
+  const eventStart = searchParams.get('eventStart') || undefined;
+  const eventEnd = searchParams.get('eventEnd') || undefined;
   const neLat = parseFloat(searchParams.get('neLat') || '');
   const neLng = parseFloat(searchParams.get('neLng') || '');
   const swLat = parseFloat(searchParams.get('swLat') || '');
@@ -28,6 +36,32 @@ export async function GET(req: NextRequest) {
       where.OR = categories.map((c) => ({ category: { contains: c, mode: 'insensitive' } }));
     }
   }
+  if (!Number.isNaN(priceMin) || !Number.isNaN(priceMax)) {
+    const priceFilter: any[] = [];
+    const min = !Number.isNaN(priceMin) ? priceMin : undefined;
+    const max = !Number.isNaN(priceMax) ? priceMax : undefined;
+    if (min !== undefined || max !== undefined) {
+      priceFilter.push({
+        price: {
+          ...(min !== undefined ? { gte: min } : {}),
+          ...(max !== undefined ? { lte: max } : {}),
+        },
+      });
+      priceFilter.push({
+        priceRange: {
+          ...(min !== undefined ? { gte: min } : {}),
+          ...(max !== undefined ? { lte: max } : {}),
+        },
+      });
+      where.AND = [...(where.AND || []), { OR: priceFilter }];
+    }
+  }
+  if (eventStart || eventEnd) {
+    const evtFilter: any = {};
+    if (eventStart) evtFilter.gte = eventStart;
+    if (eventEnd) evtFilter.lte = eventEnd;
+    where.AND = [...(where.AND || []), { type: 'event' }, { start: evtFilter }];
+  }
   if ([neLat, neLng, swLat, swLng].every((n) => !Number.isNaN(n))) {
     where.AND = [
       { latitude: { gte: swLat } },
@@ -37,15 +71,22 @@ export async function GET(req: NextRequest) {
     ];
   }
 
-  const rows = await prisma.thing.findMany({ where, orderBy: { createdAt: 'desc' } });
+  let rows: any[] = [];
+  try {
+    rows = await prisma.thing.findMany({ where, orderBy: { createdAt: 'desc' } });
+  } catch (err) {
+    logError('things.list_failed', err, { ownerId, search, type, status });
+    return NextResponse.json({ message: 'Failed to fetch things' }, { status: 500 });
+  }
   // Always return estimated coordinates on the main map (rounded ~1km)
   const round = (n: number | null | undefined, d = 2) =>
     typeof n === 'number' ? Math.round(n * Math.pow(10, d)) / Math.pow(10, d) : n;
   const things = rows.map((t: any) => ({
     ...t,
-    latitude: round(t.latitude, 2),
-    longitude: round(t.longitude, 2),
+    latitude: PRIVACY_DISABLED ? t.latitude : round(t.latitude, 2),
+    longitude: PRIVACY_DISABLED ? t.longitude : round(t.longitude, 2),
   }));
+  logInfo('things.list_ok', { count: things.length });
   return NextResponse.json({ things, message: 'Fetching things successful' });
 }
 

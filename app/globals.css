@@ -5,6 +5,7 @@
 :root {
   --foreground: 23 23 23;
   --background: 247 250 252;
+  --header-offset: 72px;
 }
 
 html, body, #__next {

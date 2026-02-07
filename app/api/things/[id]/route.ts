@@ -5,6 +5,7 @@ import { cloudinary } from '@/server/cloudinary';
 import { verifyAuth } from '@/server/auth';
 import { z } from '@/server/validate';
 import { rateLimit } from '@/server/rateLimit';
+import { captureError, logError, logInfo } from '@/server/observability';
 
 // Compute an obfuscated/approximate center from precise coordinates
 function approximateCenter(lat?: number | null, lng?: number | null, radiusKm = 2) {
@@ -30,10 +31,16 @@ function privacyFromThing(t: any): PrivacyConfig {
 
 export async function GET(req: Request, context: any) {
   const auth = verifyAuth(req);
-  const thing = await prisma.thing.findUnique({
-    where: { id: String(context?.params?.id || '') },
-    include: { owner: { select: { id: true, name: true, userAvatar: true } } },
-  });
+  let thing;
+  try {
+    thing = await prisma.thing.findUnique({
+      where: { id: String(context?.params?.id || '') },
+      include: { owner: { select: { id: true, name: true, userAvatar: true } } },
+    });
+  } catch (err) {
+    logError('things.get_failed', err, { thingId: String(context?.params?.id || '') });
+    return NextResponse.json({ error: 'Could not fetch thing' }, { status: 500 });
+  }
   if (!thing) return NextResponse.json({ error: 'Could not fetch thing' }, { status: 404 });
 
   const privacy = privacyFromThing(thing);
@@ -51,7 +58,7 @@ export async function GET(req: Request, context: any) {
       approved = !!a;
     } catch {}
   }
-  const allowExact = isOwner || approved;
+  const allowExact = PRIVACY_DISABLED || isOwner || approved;
   const allowApprox = true; // always allow approximate for all viewers
 
   const approx = allowApprox ? approximateCenter((thing as any).latitude, (thing as any).longitude, privacy.radiusKm) : null;
@@ -90,6 +97,7 @@ export async function GET(req: Request, context: any) {
   // If owner is viewing, they can see their own Google metadata for management purposes (still omit precise coords here)
   if (isOwner) safe.googleData = (thing as any).googleData || undefined;
 
+  logInfo('things.get_ok', { thingId: thing.id, allowExact, isOwner });
   return NextResponse.json({ thing: safe, message: 'Fetching thing successful' });
 }
 
@@ -100,7 +108,13 @@ export async function PATCH(req: Request, context: any) {
   }
   const limited = rateLimit(req, { key: 'things:update', max: 50, windowMs: 10 * 60_000 });
   if (!limited.ok) return NextResponse.json({ message: 'Too many requests' }, { status: 429 });
-  const form = await req.formData();
+  let form: FormData;
+  try {
+    form = await req.formData();
+  } catch (err) {
+    logError('things.update_formdata_failed', err, { thingId: String(context?.params?.id || '') });
+    return NextResponse.json({ message: 'Invalid form data' }, { status: 400 });
+  }
 
   const data: any = {};
   const strFields = ['name','country','city','category','type','status','start','end','currencyCode'] as const;
@@ -229,7 +243,13 @@ export async function PATCH(req: Request, context: any) {
     }
   } catch {}
 
-  const thing = await prisma.thing.update({ where: { id }, data });
+  let thing;
+  try {
+    thing = await prisma.thing.update({ where: { id }, data });
+  } catch (err) {
+    captureError(err, { thingId: id });
+    return NextResponse.json({ message: 'Failed to update' }, { status: 500 });
+  }
   return NextResponse.json({ message: 'Updated thing', thing });
 }
 
@@ -261,6 +281,11 @@ export async function DELETE(req: Request, context: any) {
   if (!current) return NextResponse.json({ message: 'Not found' }, { status: 404 });
   if (current.ownerId !== auth.userId) return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
 
-  await prisma.thing.delete({ where: { id } });
+  try {
+    await prisma.thing.delete({ where: { id } });
+  } catch (err) {
+    captureError(err, { thingId: id });
+    return NextResponse.json({ message: 'Failed to delete' }, { status: 500 });
+  }
   return NextResponse.json({ message: 'Thing was deleted' });
 }

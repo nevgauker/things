@@ -7,6 +7,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const hideHeaderOn = ['/signin', '/signup'];
   const hide = hideHeaderOn.includes(pathname);
+  const isHome = pathname === '/';
   return (
     <>
       {!hide && (
@@ -14,7 +15,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Header />
         </Suspense>
       )}
-      {children}
+      <main style={!hide && !isHome ? { paddingTop: 'var(--header-offset, 0px)' } : undefined}>
+        {children}
+      </main>
     </>
   );
 }

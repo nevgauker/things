@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchMyThings } from '@/lib/api/endpoints';
@@ -22,7 +22,7 @@ export default function MyThingsPage() {
   const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [type, setType] = useState<'all' | 'thing' | 'store' | 'event'>('all');
-  const [status, setStatus] = useState<'all' | 'available' | 'unavailable'>('all');
+  const [status, setStatus] = useState<'all' | 'available' | 'unavailable' | 'sold' | 'ended'>('all');
 
   // Paging
   const [page, setPage] = useState(1);
@@ -114,7 +114,10 @@ export default function MyThingsPage() {
         </div>
       )}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold">My Things</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold">My Things</h1>
+          <button className="btn-primary hidden sm:inline-flex" onClick={() => router.push('/my/new')}>Create Thing</button>
+        </div>
         <div className="inline-flex overflow-hidden rounded border">
           <button
             className={`px-3 py-1 text-sm ${source === 'my' ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}
@@ -129,11 +132,11 @@ export default function MyThingsPage() {
         </div>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
         <input
           value={search}
           onChange={(e)=>setSearch(e.target.value)}
-          placeholder="Search by name, category, city…"
+          placeholder="Search by name, category, cityâ€¦"
           className="rounded border px-3 py-2"
         />
         <select value={type} onChange={(e)=>setType(e.target.value as any)} className="rounded border px-3 py-2">
@@ -142,44 +145,63 @@ export default function MyThingsPage() {
           <option value="store">Store</option>
           <option value="event">Event</option>
         </select>
-        <select value={status} onChange={(e)=>setStatus(e.target.value as any)} className="rounded border px-3 py-2">
-          <option value="all">All statuses</option>
-          <option value="available">Available</option>
-          <option value="unavailable">Unavailable</option>
-        </select>
       </div>
 
       <div className="mb-4">
         <CategoryChips value={selectedCategories} onChange={setSelectedCategories} />
       </div>
 
-      {loading && <div className="text-gray-500">Loading…</div>}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {(['all','available','unavailable','sold','ended'] as const).map((s) => (
+          <button
+            key={s}
+            className={`rounded-full border px-3 py-1.5 text-sm ${status === s ? 'border-primary bg-primary text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-primary'}`}
+            onClick={() => setStatus(s as any)}
+            aria-pressed={status === s}
+          >
+            {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+        <div className="ml-auto text-xs text-gray-500">{filtered.length} results</div>
+      </div>
+
+      {loading && <div className="text-gray-500">Loadingâ€¦</div>}
       {error && <div className="mb-3 text-sm text-amber-700">{error}</div>}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {pageItems.map((t: any) => (
-          <div key={t.id} className="flex flex-col gap-2">
-            <ThingCard thing={t} />
-            <div className="flex items-center gap-2">
-              <button className="btn-secondary" onClick={() => router.push(`/things/${t.id}`)}>View</button>
-              {source === 'my' && user && (
-                <>
-                  <button className="btn-primary" onClick={() => router.push(`/things/${t.id}/edit`)}>Edit</button>
-                  <button className="btn-danger" onClick={() => onDelete(t.id)}>Delete</button>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-6 flex items-center justify-between">
-        <span className="text-sm text-gray-600">{filtered.length} items • Page {page} of {totalPages}</span>
-        <div className="flex items-center gap-2">
-          <button className="btn-secondary" disabled={page <= 1} onClick={()=>setPage((p)=>Math.max(1, p-1))}>Prev</button>
-          <button className="btn-secondary" disabled={page >= totalPages} onClick={()=>setPage((p)=>Math.min(totalPages, p+1))}>Next</button>
+      {filtered.length === 0 && !loading ? (
+        <div className="rounded border border-dashed p-6 text-center text-sm text-gray-600">
+          <div className="mb-2 font-medium text-gray-700">No things yet.</div>
+          <div className="mb-4">Create your first Thing to get started.</div>
+          <button className="btn-primary" onClick={() => router.push('/my/new')}>Create Thing</button>
         </div>
-      </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {pageItems.map((t: any) => (
+            <div key={t.id} className="flex flex-col gap-2">
+              <ThingCard thing={t} />
+              <div className="flex items-center gap-2">
+                <button className="btn-secondary" onClick={() => router.push(`/things/${t.id}`)}>View</button>
+                {source === 'my' && user && (
+                  <>
+                    <button className="btn-primary" onClick={() => router.push(`/things/${t.id}/edit`)}>Edit</button>
+                    <button className="btn-danger" onClick={() => onDelete(t.id)}>Delete</button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {filtered.length > 0 && (
+        <div className="mt-6 flex items-center justify-between">
+          <span className="text-sm text-gray-600">{filtered.length} items â€¢ Page {page} of {totalPages}</span>
+          <div className="flex items-center gap-2">
+            <button className="btn-secondary" disabled={page <= 1} onClick={()=>setPage((p)=>Math.max(1, p-1))}>Prev</button>
+            <button className="btn-secondary" disabled={page >= totalPages} onClick={()=>setPage((p)=>Math.min(totalPages, p+1))}>Next</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

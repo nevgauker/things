@@ -1,14 +1,14 @@
-"use client";
-import { useEffect, useMemo, useState } from 'react';
+﻿"use client";
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createThing } from '@/lib/api/endpoints';
 import type { User } from '@/lib/api/types';
 import { categories } from '@/lib/api/types';
-import { symbolForCurrency } from '@/lib/money';
 import { loadGoogleMaps } from '@/lib/maps/google';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import { useAuth } from '@/lib/auth/provider';
 import Image from 'next/image';
+import { track } from '@/lib/analytics';
 
 type ThingType = 'thing' | 'store' | 'event';
 
@@ -36,6 +36,9 @@ export default function NewThingPage() {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [typeIndex, setTypeIndex] = useState(0);
   const [categoryIndex, setCategoryIndex] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
     try {
@@ -67,6 +70,11 @@ export default function NewThingPage() {
     return () => document.removeEventListener('click', onDocClick);
   }, []);
 
+  function onFilesSelected(files: File[]) {
+    const next = files.slice(0, 5);
+    setThingImages(next);
+  }
+
   async function useCurrentLocation() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -74,6 +82,8 @@ export default function NewThingPage() {
       const lng = pos.coords.longitude;
       setLatitude(String(lat));
       setLongitude(String(lng));
+      setLocationNotice('Location set from your device.');
+      setTimeout(() => setLocationNotice(null), 2000);
 
       try {
         await loadGoogleMaps();
@@ -98,6 +108,7 @@ export default function NewThingPage() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitted(true);
     setError(null);
     setSuccess(false);
     if (!authUser) {
@@ -110,6 +121,7 @@ export default function NewThingPage() {
     }
     try {
       setLoading(true);
+      track('create_start', { type });
       const form = new FormData();
       form.set('name', name);
       form.set('type', type);
@@ -139,9 +151,11 @@ export default function NewThingPage() {
 
       await createThing(form);
       setSuccess(true);
+      track('create_submit_success', { type });
       window.location.href = '/my';
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to create thing');
+      track('create_submit_error', { type });
     } finally {
       setLoading(false);
     }
@@ -163,126 +177,199 @@ export default function NewThingPage() {
         <Link className="text-sm text-primary" href="/my">Back to My Things</Link>
       </div>
 
-      <form onSubmit={onSubmit} className="card space-y-5 p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
+      <form onSubmit={onSubmit} className="card space-y-6 p-4">
+        {/* Basics */}
+        <section className="space-y-4">
+          <div className="text-sm font-semibold text-gray-700">Basics</div>
+          <div>
             <label className="mb-1 block text-sm font-medium">Name</label>
             <div className="relative">
               <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41L11 4a2 2 0 0 0-2.83 0L2 10.17a2 2 0 0 0 0 2.83L11.59 22a2 2 0 0 0 2.83 0l5.17-5.17a2 2 0 0 0 0-2.83Z"/><path d="M7 7h.01"/></svg>
               </span>
-              <input className="w-full rounded border pl-9 pr-3 py-2" value={name} onChange={(e)=>setName(e.target.value)} placeholder="Title" />
+              <input className={`w-full rounded border pl-9 pr-3 py-2 ${submitted && !name ? 'border-red-300' : ''}`} value={name} onChange={(e)=>setName(e.target.value)} placeholder="Title" />
             </div>
+            {submitted && !name && <div className="mt-1 text-xs text-red-600">Name is required.</div>}
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">Type</label>
-            <div className="relative" data-dd="type">
-              <button
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded={typeOpen}
-                onClick={()=>{ setTypeOpen((v)=>!v); setTypeIndex(['thing','store','event'].indexOf(type)); }}
-                className="relative w-full rounded border pl-9 pr-8 py-2 text-left hover:border-gray-400"
-                onKeyDown={(e)=>{
-                  const opts: ThingType[] = ['thing','store','event'];
-                  if (e.key === 'ArrowDown') { e.preventDefault(); setTypeOpen(true); setTypeIndex((i)=> (i+1) % opts.length); }
-                  if (e.key === 'ArrowUp') { e.preventDefault(); setTypeOpen(true); setTypeIndex((i)=> (i-1+opts.length)%opts.length); }
-                  if (e.key === 'Enter' && typeOpen) { e.preventDefault(); const id = (['thing','store','event'] as ThingType[])[typeIndex]; setType(id); setTypeOpen(false); }
-                  if (e.key === 'Escape') { setTypeOpen(false); }
-                }}
-              >
-                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-                  {type === 'store' ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M16 22H8a4 4 0 0 1-4-4V9h20v9a4 4 0 0 1-4 4Z"/></svg>
-                  ) : type === 'event' ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                  )}
-                </span>
-                <span className="block truncate capitalize">{type}</span>
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">▾</span>
-              </button>
-              {typeOpen && (
-                <ul role="listbox" className="absolute z-10 mt-1 w-full overflow-auto rounded border bg-white py-1 text-sm shadow">
-                  {([
-                    { id: 'thing', label: 'Thing' },
-                    { id: 'store', label: 'Store' },
-                    { id: 'event', label: 'Event' },
-                  ] as {id: ThingType; label: string}[]).map((opt)=> (
-                    <li key={opt.id} role="option" aria-selected={type===opt.id}>
-                      <button type="button" onClick={()=>{ setType(opt.id); setTypeOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 ${(['thing','store','event'] as ThingType[])[typeIndex]===opt.id?'bg-gray-50':''}`}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Type</label>
+              <div className="relative" data-dd="type">
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={typeOpen}
+                  onClick={()=>{ setTypeOpen((v)=>!v); setTypeIndex(['thing','store','event'].indexOf(type)); }}
+                  className={`relative w-full rounded border pl-9 pr-8 py-2 text-left hover:border-gray-400 ${submitted && !type ? 'border-red-300' : ''}`}
+                  onKeyDown={(e)=>{
+                    const opts: ThingType[] = ['thing','store','event'];
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setTypeOpen(true); setTypeIndex((i)=> (i+1) % opts.length); }
+                    if (e.key === 'ArrowUp') { e.preventDefault(); setTypeOpen(true); setTypeIndex((i)=> (i-1+opts.length)%opts.length); }
+                    if (e.key === 'Enter' && typeOpen) { e.preventDefault(); const id = (['thing','store','event'] as ThingType[])[typeIndex]; setType(id); setTypeOpen(false); }
+                    if (e.key === 'Escape') { setTypeOpen(false); }
+                  }}
+                >
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                    {type === 'store' ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M16 22H8a4 4 0 0 1-4-4V9h20v9a4 4 0 0 1-4 4Z"/></svg>
+                    ) : type === 'event' ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    )}
+                  </span>
+                  <span className="block truncate capitalize">{type}</span>
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">â–¾</span>
+                </button>
+                {typeOpen && (
+                  <ul role="listbox" className="absolute z-10 mt-1 w-full overflow-auto rounded border bg-white py-1 text-sm shadow">
+                    {([
+                      { id: 'thing', label: 'Thing' },
+                      { id: 'store', label: 'Store' },
+                      { id: 'event', label: 'Event' },
+                    ] as {id: ThingType; label: string}[]).map((opt)=> (
+                      <li key={opt.id} role="option" aria-selected={type===opt.id}>
+                        <button type="button" onClick={()=>{ setType(opt.id); setTypeOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 ${(['thing','store','event'] as ThingType[])[typeIndex]===opt.id?'bg-gray-50':''}`}>
+                          <span className="text-gray-600">
+                            {opt.id === 'store' ? (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M16 22H8a4 4 0 0 1-4-4V9h20v9a4 4 0 0 1-4 4Z"/></svg>
+                            ) : opt.id === 'event' ? (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            ) : (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                            )}
+                          </span>
+                          <span className="capitalize">{opt.label}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">Category</label>
+              <div className="relative" data-dd="category">
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={categoryOpen}
+                  onClick={()=>{ setCategoryOpen((v)=>!v); const idx = Math.max(0, categories.findIndex(c=>c.name===category)); setCategoryIndex(idx); }}
+                  className="relative w-full rounded border pl-9 pr-8 py-2 text-left hover:border-gray-400"
+                  onKeyDown={(e)=>{
+                    const len = categories.length;
+                    if (e.key === 'ArrowDown') { e.preventDefault(); setCategoryOpen(true); setCategoryIndex((i)=> (i+1)%len); }
+                    if (e.key === 'ArrowUp') { e.preventDefault(); setCategoryOpen(true); setCategoryIndex((i)=> (i-1+len)%len); }
+                    if (e.key === 'Enter' && categoryOpen) { e.preventDefault(); const c = categories[categoryIndex]; setCategory(c?.name||''); setCategoryOpen(false); }
+                    if (e.key === 'Escape') { setCategoryOpen(false); }
+                  }}
+                >
+                  <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                    {category ? (
+                      <Image src={`/categories/${category}.png`} alt="" width={16} height={16} />
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+                    )}
+                  </span>
+                  <span className="block truncate">{category ? categories.find(c=>c.name===category)?.displayName : 'Select a category'}</span>
+                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">â–¾</span>
+                </button>
+                {categoryOpen && (
+                  <ul role="listbox" className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded border bg-white py-1 text-sm shadow">
+                    <li key="none">
+                      <button type="button" onClick={()=>{ setCategory(''); setCategoryOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50">
                         <span className="text-gray-600">
-                          {opt.id === 'store' ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M16 22H8a4 4 0 0 1-4-4V9h20v9a4 4 0 0 1-4 4Z"/></svg>
-                          ) : opt.id === 'event' ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                          ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                          )}
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
                         </span>
-                        <span className="capitalize">{opt.label}</span>
+                        <span>None</span>
                       </button>
                     </li>
-                  ))}
-                </ul>
-              )}
+                    {categories.map((c, idx)=> (
+                      <li key={c.id} role="option" aria-selected={category===c.name}>
+                        <button type="button" onClick={()=>{ setCategory(c.name); setCategoryOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 ${categoryIndex===idx?'bg-gray-50':''}`}>
+                          <Image src={`/categories/${c.name}.png`} alt="" width={16} height={16} />
+                          <span>{c.displayName}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
+        </section>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">Category</label>
-            <div className="relative" data-dd="category">
-              <button
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded={categoryOpen}
-                onClick={()=>{ setCategoryOpen((v)=>!v); const idx = Math.max(0, categories.findIndex(c=>c.name===category)); setCategoryIndex(idx); }}
-                className="relative w-full rounded border pl-9 pr-8 py-2 text-left hover:border-gray-400"
-                onKeyDown={(e)=>{
-                  const len = categories.length;
-                  if (e.key === 'ArrowDown') { e.preventDefault(); setCategoryOpen(true); setCategoryIndex((i)=> (i+1)%len); }
-                  if (e.key === 'ArrowUp') { e.preventDefault(); setCategoryOpen(true); setCategoryIndex((i)=> (i-1+len)%len); }
-                  if (e.key === 'Enter' && categoryOpen) { e.preventDefault(); const c = categories[categoryIndex]; setCategory(c?.name||''); setCategoryOpen(false); }
-                  if (e.key === 'Escape') { setCategoryOpen(false); }
-                }}
-              >
+        {/* Location */}
+        <section className="space-y-4">
+          <div className="text-sm font-semibold text-gray-700">Location</div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Latitude</label>
+              <div className="relative">
                 <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-                  {category ? (
-                    <Image src={`/categories/${category}.png`} alt="" width={16} height={16} />
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
-                  )}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s8-4.5 8-10a8 8 0 0 0-16 0c0 5.5 8 10 8 10Z"/><circle cx="12" cy="11" r="3"/></svg>
                 </span>
-                <span className="block truncate">{category ? categories.find(c=>c.name===category)?.displayName : 'Select a category'}</span>
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">▾</span>
-              </button>
-              {categoryOpen && (
-                <ul role="listbox" className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded border bg-white py-1 text-sm shadow">
-                  <li key="none">
-                    <button type="button" onClick={()=>{ setCategory(''); setCategoryOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50">
-                      <span className="text-gray-600">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
-                      </span>
-                      <span>None</span>
-                    </button>
-                  </li>
-                  {categories.map((c, idx)=> (
-                    <li key={c.id} role="option" aria-selected={category===c.name}>
-                      <button type="button" onClick={()=>{ setCategory(c.name); setCategoryOpen(false); }} className={`flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 ${categoryIndex===idx?'bg-gray-50':''}`}>
-                        <Image src={`/categories/${c.name}.png`} alt="" width={16} height={16} />
-                        <span>{c.displayName}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                <input className={`w-full rounded border pl-9 pr-3 py-2 ${submitted && !latitude ? 'border-red-300' : ''}`} value={latitude} onChange={(e)=>setLatitude(e.target.value)} placeholder="e.g. 37.7749" inputMode="decimal" enterKeyHint="done" />
+              </div>
+              {submitted && !latitude && <div className="mt-1 text-xs text-red-600">Latitude is required.</div>}
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Longitude</label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s8-4.5 8-10a8 8 0 0 0-16 0c0 5.5 8 10 8 10Z"/><circle cx="12" cy="11" r="3"/></svg>
+                </span>
+                <input className={`w-full rounded border pl-9 pr-3 py-2 ${submitted && !longitude ? 'border-red-300' : ''}`} value={longitude} onChange={(e)=>setLongitude(e.target.value)} placeholder="e.g. -122.4194" inputMode="decimal" enterKeyHint="done" />
+              </div>
+              {submitted && !longitude && <div className="mt-1 text-xs text-red-600">Longitude is required.</div>}
             </div>
           </div>
 
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <button type="button" className="btn-secondary w-full sm:w-auto" onClick={useCurrentLocation}>Use my current location</button>
+            <span className="text-xs text-gray-500">or click on the map below</span>
+            {locationNotice && <span className="text-xs text-green-700">{locationNotice}</span>}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Country</label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20"/></svg>
+                </span>
+                <input className="w-full rounded border pl-9 pr-3 py-2" value={country} onChange={(e)=>setCountry(e.target.value)} placeholder="Country" autoComplete="country" />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">City</label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22V6a2 2 0 0 1 2-2h4"/><path d="M7 22V4h10a2 2 0 0 1 2 2v16"/><path d="M14 10h2"/><path d="M14 14h2"/><path d="M14 18h2"/></svg>
+                </span>
+                <input className="w-full rounded border pl-9 pr-3 py-2" value={city} onChange={(e)=>setCity(e.target.value)} placeholder="City" autoComplete="address-level2" />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <LocationPickerMap
+              lat={latitude ? Number(latitude) : null}
+              lng={longitude ? Number(longitude) : null}
+              className="h-56 sm:h-64 md:h-72"
+              onChange={(la, lo) => { setLatitude(String(la)); setLongitude(String(lo)); }}
+              onAddress={(ci, co) => { if (ci) setCity(ci); if (co) setCountry(co); }}
+            />
+          </div>
+        </section>
+
+        {/* Details */}
+        <section className="space-y-4">
+          <div className="text-sm font-semibold text-gray-700">Details</div>
           {showPrice && (
-            <>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium">Price</label>
                 <div className="relative">
@@ -300,22 +387,22 @@ export default function NewThingPage() {
                   </span>
                   <select className="w-full rounded border pl-9 pr-3 py-2" value={currencyCode} onChange={(e)=>setCurrencyCode(e.target.value)}>
                   <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
+                  <option value="EUR">EUR (â‚¬)</option>
+                  <option value="GBP">GBP (Â£)</option>
                   <option value="AUD">AUD (A$)</option>
                   <option value="CAD">CAD (C$)</option>
-                  <option value="JPY">JPY (¥)</option>
-                  <option value="INR">INR (₹)</option>
+                  <option value="JPY">JPY (Â¥)</option>
+                  <option value="INR">INR (â‚¹)</option>
                   </select>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {showRange && (
-              <div className="sm:col-span-2">
+              <div>
               <label className="mb-1 block text-sm font-medium">Price Range</label>
-              <p className="-mt-1 mb-1 text-xs text-gray-500">Relative scale for stores (e.g., 1–5). Higher means more expensive.</p>
+              <p className="-mt-1 mb-1 text-xs text-gray-500">Relative scale for stores (e.g., 1â€“5). Higher means more expensive.</p>
               <div className="relative">
                 <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14h6"/><path d="M14 10h6"/><path d="M4 18h16"/><path d="M4 6h16"/></svg>
@@ -326,7 +413,7 @@ export default function NewThingPage() {
           )}
 
           {showEvent && (
-            <>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium">Start</label>
                 <p className="-mt-1 mb-1 text-xs text-gray-500">Local time; adjust for your timezone if needed.</p>
@@ -347,103 +434,66 @@ export default function NewThingPage() {
                   <input type="datetime-local" className="w-full rounded border pl-9 pr-3 py-2" value={end} onChange={(e)=>setEnd(e.target.value)} />
                 </div>
               </div>
-            </>
+            </div>
           )}
+        </section>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">Latitude</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s8-4.5 8-10a8 8 0 0 0-16 0c0 5.5 8 10 8 10Z"/><circle cx="12" cy="11" r="3"/></svg>
-              </span>
-              <input className="w-full rounded border pl-9 pr-3 py-2" value={latitude} onChange={(e)=>setLatitude(e.target.value)} placeholder="e.g. 37.7749" inputMode="decimal" enterKeyHint="done" />
+        {/* Images */}
+        <section className="space-y-4">
+          <div className="text-sm font-semibold text-gray-700">Images</div>
+          <div
+            className={`rounded-lg border-2 border-dashed p-4 text-sm ${dragOver ? 'border-primary bg-primary/5' : 'border-gray-200'}`}
+            onDragOver={(e)=>{ e.preventDefault(); setDragOver(true); }}
+            onDragLeave={()=>setDragOver(false)}
+            onDrop={(e)=>{
+              e.preventDefault();
+              setDragOver(false);
+              const files = Array.from(e.dataTransfer.files || []).filter((f)=>f.type.startsWith('image/'));
+              if (files.length) onFilesSelected(files);
+            }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-gray-700">Drag and drop images</div>
+                <div className="text-xs text-gray-500">Up to 5 images. JPG/PNG recommended.</div>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded border bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M20.4 14.5L16 10 4 22"/></svg>
+                <span>Upload images</span>
+                <input multiple type="file" accept="image/*" className="hidden" onChange={(e)=> {
+                  const files = Array.from(e.target.files || []);
+                  onFilesSelected(files);
+                }} />
+              </label>
             </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Longitude</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21s8-4.5 8-10a8 8 0 0 0-16 0c0 5.5 8 10 8 10Z"/><circle cx="12" cy="11" r="3"/></svg>
-              </span>
-              <input className="w-full rounded border pl-9 pr-3 py-2" value={longitude} onChange={(e)=>setLongitude(e.target.value)} placeholder="e.g. -122.4194" inputMode="decimal" enterKeyHint="done" />
-            </div>
-          </div>
-          <div className="sm:col-span-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-            <button type="button" className="btn-secondary w-full sm:w-auto" onClick={useCurrentLocation}>Use my current location</button>
-            <span className="text-xs text-gray-500">or click on the map below</span>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Country</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 0 20"/></svg>
-              </span>
-              <input className="w-full rounded border pl-9 pr-3 py-2" value={country} onChange={(e)=>setCountry(e.target.value)} placeholder="Country" autoComplete="country" />
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">City</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-gray-500">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22V6a2 2 0 0 1 2-2h4"/><path d="M7 22V4h10a2 2 0 0 1 2 2v16"/><path d="M14 10h2"/><path d="M14 14h2"/><path d="M14 18h2"/></svg>
-              </span>
-              <input className="w-full rounded border pl-9 pr-3 py-2" value={city} onChange={(e)=>setCity(e.target.value)} placeholder="City" autoComplete="address-level2" />
-            </div>
+            {thingImages.length>0 && <div className="mt-2 text-xs text-gray-600">{thingImages.length} selected (max 5)</div>}
           </div>
 
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium">Image</label>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded border bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M20.4 14.5L16 10 4 22"/></svg>
-                    <span>Upload images</span>
-                  <input multiple type="file" accept="image/*" className="hidden" onChange={(e)=> {
-                    const files = Array.from(e.target.files || []);
-                    const next = files.slice(0, 5);
-                    setThingImages(next);
-                  }} />
-                  </label>
-                {thingImages.length>0 && <span className="truncate text-xs text-gray-600">{thingImages.length} selected (max 5)</span>}
+          {previewUrls.length>0 && (
+            <div className="flex flex-wrap gap-2">
+              {previewUrls.map((u, i)=> (
+                <div key={i} className="relative h-16 w-16 overflow-hidden rounded border">
+                  <Image src={u} alt="" width={64} height={64} className="h-16 w-16 object-cover" />
+                  <button
+                    type="button"
+                    aria-label="Remove image"
+                    className="absolute right-0 top-0 m-0.5 rounded bg-white/80 p-0.5 text-gray-700 hover:bg-white"
+                    onClick={() => setThingImages((arr)=> arr.filter((_, idx)=> idx !== i))}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
                 </div>
-              {previewUrls.length>0 && (
-                <div className="flex flex-wrap gap-2">
-                  {previewUrls.map((u, i)=> (
-                    <div key={i} className="relative h-16 w-16 overflow-hidden rounded border">
-                      <Image src={u} alt="" width={64} height={64} className="h-16 w-16 object-cover" />
-                      <button
-                        type="button"
-                        aria-label="Remove image"
-                        className="absolute right-0 top-0 m-0.5 rounded bg-white/80 p-0.5 text-gray-700 hover:bg-white"
-                        onClick={() => setThingImages((arr)=> arr.filter((_, idx)=> idx !== i))}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
-            </div>
-        </div>
+          )}
+        </section>
 
         {error && <div className="text-sm text-red-600">{error}</div>}
         {success && <div className="text-sm text-green-700">Thing created.</div>}
 
-        <div className="pt-2">
-          <LocationPickerMap
-            lat={latitude ? Number(latitude) : null}
-            lng={longitude ? Number(longitude) : null}
-            className="h-56 sm:h-64 md:h-72"
-            onChange={(la, lo) => { setLatitude(String(la)); setLongitude(String(lo)); }}
-            onAddress={(ci, co) => { if (ci) setCity(ci); if (co) setCountry(co); }}
-          />
-        </div>
-
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-          <button disabled={loading || !authUser} className="btn-primary w-full sm:w-auto" type="submit">{loading ? 'Creating…' : 'Create Thing'}</button>
-          <Link href="/my" className="btn-secondary w-full sm:w-auto text-center">Cancel</Link>
+          <button disabled={loading || !authUser} className="btn-primary w-full sm:w-auto" type="submit">{loading ? 'Creatingâ€¦' : 'Create Thing'}</button>
+          <button type="button" className="btn-secondary w-full sm:w-auto text-center" onClick={() => window.history.back()}>Cancel</button>
         </div>
       </form>
     </div>

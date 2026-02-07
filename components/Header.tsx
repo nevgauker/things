@@ -10,6 +10,7 @@ import { useSearchParams, usePathname } from 'next/navigation';
 import { loadGoogleMaps } from '@/lib/maps/google';
 
 export default function Header({ onSearch }: { onSearch?: (q: string) => void }) {
+  const headerRef = useRef<HTMLElement | null>(null);
   const [q, setQ] = useState('');
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
@@ -45,6 +46,18 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
   }, [menuOpen]);
+
+  // Update CSS var for header height so pages can offset content
+  useEffect(() => {
+    function updateOffset() {
+      if (!headerRef.current) return;
+      const h = headerRef.current.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--header-offset', `${Math.ceil(h)}px`);
+    }
+    updateOffset();
+    window.addEventListener('resize', updateOffset);
+    return () => window.removeEventListener('resize', updateOffset);
+  }, []);
 
   // Prepare Google Places AutocompleteService
   useEffect(() => {
@@ -146,116 +159,115 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-10 bg-transparent">
-      <div className="relative flex h-12 w-full items-center gap-2 px-2 md:px-3">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/70 to-transparent"></div>
-        {/* Left: logo + search */}
-        <div className="flex items-center gap-3">
+    <header ref={headerRef} className="fixed top-0 left-0 right-0 z-10 bg-transparent">
+      <div className="relative w-full border-b border-white/40 bg-white/80 backdrop-blur">
+        <div className="flex h-12 w-full items-center gap-2 px-2 md:px-3">
+          {/* Left: logo */}
           <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
             <Image src="/mainIcon.png" alt="Things" width={32} height={32} />
             <span className="hidden sm:inline">Things</span>
           </Link>
-          <div className="hidden sm:flex">
-            <div className="relative flex w-[30ch] items-center gap-2 rounded-full border bg-white px-3 py-2 shadow-sm">
-              <button
-                aria-label="Search"
-                className="rounded-full p-1.5 text-gray-600 hover:bg-gray-100"
-                onClick={() => {
-                  if (suggestionsOpen && activeIndex >= 0 && activeIndex < suggestions.length) {
-                    selectSuggestion(suggestions[activeIndex]);
-                    return;
-                  }
-                  if (onSearch) onSearch(q);
-                  else router.push(`/?search=${encodeURIComponent(q)}` as any);
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-              </button>
-              <input
-                ref={inputRef}
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (!suggestionsOpen || !suggestions.length) return;
-                    setActiveIndex((i) => Math.min(suggestions.length - 1, (i < 0 ? 0 : i + 1)));
-                  } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    if (!suggestionsOpen || !suggestions.length) return;
-                    setActiveIndex((i) => Math.max(0, i - 1));
-                  } else if (e.key === 'Enter') {
-                    if (suggestionsOpen && activeIndex >= 0 && activeIndex < suggestions.length) {
-                      e.preventDefault();
-                      selectSuggestion(suggestions[activeIndex]);
-                      } else {
-                      if (onSearch) onSearch(q);
-                      else router.push(`/?search=${encodeURIComponent(q)}` as any);
-                    }
-                  } else if (e.key === 'Escape') {
-                    setSuggestionsOpen(false);
-                  }
-                }}
-                placeholder="Search nearby…"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-500"
-                onFocus={() => { if (suggestions.length) setSuggestionsOpen(true); }}
-                onBlur={() => { setTimeout(() => setSuggestionsOpen(false), 120); }}
-              />
-              {q && (
+
+          {/* Desktop search (center) */}
+          <div className="hidden flex-1 sm:flex sm:justify-center">
+            <div className="relative w-full max-w-[560px] px-2">
+              <div className="relative flex h-9 items-center gap-2 rounded-full border bg-white px-4 shadow-sm">
                 <button
-                  aria-label="Clear search"
+                  aria-label="Search"
                   className="rounded-full p-1.5 text-gray-600 hover:bg-gray-100"
-                  onClick={clearSearchAndRecenter}
-                  title="Clear and center on my location"
+                  onClick={() => {
+                    if (suggestionsOpen && activeIndex >= 0 && activeIndex < suggestions.length) {
+                      selectSuggestion(suggestions[activeIndex]);
+                      return;
+                    }
+                    if (onSearch) onSearch(q);
+                    else router.push(`/?search=${encodeURIComponent(q)}` as any);
+                  }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
                 </button>
-              )}
-              <button
-                aria-label="Voice search"
-                className="hidden rounded-full p-1.5 text-gray-600 hover:bg-gray-100 md:inline"
-                onClick={() => { /* reserved for future voice search */ }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                  <line x1="12" y1="19" x2="12" y2="23"></line>
-                  <line x1="8" y1="23" x2="16" y2="23"></line>
-                </svg>
-              </button>
-              {suggestionsOpen && suggestions.length > 0 && (
-                <div className="absolute left-0 top-10 z-20 w-full overflow-hidden rounded-lg border bg-white shadow-lg">
-                  <ul role="listbox" aria-label="Search suggestions" className="max-h-72 overflow-auto py-1 text-sm">
-                    {suggestions.map((sug, idx) => (
-                      <li
-                        key={sug.place_id}
-                        role="option"
-                        aria-selected={idx === activeIndex}
-                        className={`cursor-pointer px-3 py-2 text-gray-800 hover:bg-gray-50 ${idx === activeIndex ? 'bg-gray-100' : ''}`}
-                        onMouseDown={(e) => { e.preventDefault(); }}
-                        onClick={() => selectSuggestion(sug)}
-                        onMouseEnter={() => setActiveIndex(idx)}
-                      >
-                        <div className="flex items-start gap-2">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 text-gray-500"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                          <span className="truncate">{sug.description}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                <input
+                  ref={inputRef}
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      if (!suggestionsOpen || !suggestions.length) return;
+                      setActiveIndex((i) => Math.min(suggestions.length - 1, (i < 0 ? 0 : i + 1)));
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      if (!suggestionsOpen || !suggestions.length) return;
+                      setActiveIndex((i) => Math.max(0, i - 1));
+                    } else if (e.key === 'Enter') {
+                      if (suggestionsOpen && activeIndex >= 0 && activeIndex < suggestions.length) {
+                        e.preventDefault();
+                        selectSuggestion(suggestions[activeIndex]);
+                        } else {
+                        if (onSearch) onSearch(q);
+                        else router.push(`/?search=${encodeURIComponent(q)}` as any);
+                      }
+                    } else if (e.key === 'Escape') {
+                      setSuggestionsOpen(false);
+                    }
+                  }}
+                  placeholder="Search nearby…"
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-gray-500"
+                  onFocus={() => { if (suggestions.length) setSuggestionsOpen(true); }}
+                  onBlur={() => { setTimeout(() => setSuggestionsOpen(false), 120); }}
+                />
+                {q && (
+                  <button
+                    aria-label="Clear search"
+                    className="rounded-full p-1.5 text-gray-600 hover:bg-gray-100"
+                    onClick={clearSearchAndRecenter}
+                    title="Clear and center on my location"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                )}
+                <button
+                  aria-label="Voice search"
+                  className="hidden rounded-full p-1.5 text-gray-600 hover:bg-gray-100 md:inline"
+                  onClick={() => { /* reserved for future voice search */ }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                  </svg>
+                </button>
+                {suggestionsOpen && suggestions.length > 0 && (
+                  <div className="absolute left-0 top-10 z-20 w-full overflow-hidden rounded-lg border bg-white shadow-lg">
+                    <ul role="listbox" aria-label="Search suggestions" className="max-h-72 overflow-auto py-1 text-sm">
+                      {suggestions.map((sug, idx) => (
+                        <li
+                          key={sug.place_id}
+                          role="option"
+                          aria-selected={idx === activeIndex}
+                          className={`cursor-pointer px-3 py-2 text-gray-800 hover:bg-gray-50 ${idx === activeIndex ? 'bg-gray-100' : ''}`}
+                          onMouseDown={(e) => { e.preventDefault(); }}
+                          onClick={() => selectSuggestion(sug)}
+                          onMouseEnter={() => setActiveIndex(idx)}
+                        >
+                          <div className="flex items-start gap-2">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 text-gray-500"><path d="M21 10c0 7-9 12-9 12S3 17 3 10a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            <span className="truncate">{sug.description}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Center area now empty; filters moved below header */}
-        <div className="flex flex-1 items-center justify-center" />
-
-        {/* Right: quick actions + user (desktop) */}
+          {/* Right: quick actions + user (desktop) */}
         <nav className="hidden items-center gap-2 md:flex">
           {user && (
             <Link href="/my" className="rounded-full p-2 text-gray-700 hover:bg-gray-100" title="My Things" aria-label="My Things">
@@ -331,11 +343,76 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
             </div>
           </div>
         )}
+        </div>
       </div>
 
-      {/* Fixed filter bar below the nav */}
+      {/* Mobile search row */}
+      <div className="px-2 pb-3 sm:hidden">
+        <div className="relative w-full">
+          <div className="relative flex h-9 w-full items-center gap-2 rounded-full border bg-white px-4 shadow-sm">
+            <button
+              aria-label="Search"
+              className="rounded-full p-1.5 text-gray-600 hover:bg-gray-100"
+              onClick={() => {
+                if (suggestionsOpen && activeIndex >= 0 && activeIndex < suggestions.length) {
+                  selectSuggestion(suggestions[activeIndex]);
+                  return;
+                }
+                if (onSearch) onSearch(q);
+                else router.push(`/?search=${encodeURIComponent(q)}` as any);
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  if (!suggestionsOpen || !suggestions.length) return;
+                  setActiveIndex((i) => Math.min(suggestions.length - 1, (i < 0 ? 0 : i + 1)));
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  if (!suggestionsOpen || !suggestions.length) return;
+                  setActiveIndex((i) => Math.max(0, i - 1));
+                } else if (e.key === 'Enter') {
+                  if (suggestionsOpen && activeIndex >= 0 && activeIndex < suggestions.length) {
+                    e.preventDefault();
+                    selectSuggestion(suggestions[activeIndex]);
+                    } else {
+                    if (onSearch) onSearch(q);
+                    else router.push(`/?search=${encodeURIComponent(q)}` as any);
+                  }
+                } else if (e.key === 'Escape') {
+                  setSuggestionsOpen(false);
+                }
+              }}
+              placeholder="Search nearby…"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-gray-500"
+              onFocus={() => { if (suggestions.length) setSuggestionsOpen(true); }}
+              onBlur={() => { setTimeout(() => setSuggestionsOpen(false), 120); }}
+            />
+            {q && (
+              <button
+                aria-label="Clear search"
+                className="rounded-full p-1.5 text-gray-600 hover:bg-gray-100"
+                onClick={clearSearchAndRecenter}
+                title="Clear and center on my location"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Category chips below header */}
       {pathname === '/' && (
-        <div className="fixed top-12 left-0 right-0 z-10 px-2 md:px-3">
+        <div className="px-2 pb-2 md:px-3">
           <div className="max-w-full overflow-x-auto scrollbar-none">
             <CategoryChips value={cats} onChange={onCatsChange} nowrap className="py-1" />
           </div>

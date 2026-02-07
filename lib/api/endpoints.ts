@@ -11,12 +11,20 @@ export async function fetchThings(params: {
   status?: string;
   type?: string; // single
   ownerId?: string;
+  priceMin?: string;
+  priceMax?: string;
+  eventStart?: string;
+  eventEnd?: string;
 }) {
   const qs = new URLSearchParams();
   if (params.searchText) qs.set('search', params.searchText);
   if (params.category) qs.set('category', params.category);
   if (params.type) qs.set('type', params.type);
   if (params.status) qs.set('status', params.status);
+  if (params.priceMin) qs.set('priceMin', params.priceMin);
+  if (params.priceMax) qs.set('priceMax', params.priceMax);
+  if (params.eventStart) qs.set('eventStart', params.eventStart);
+  if (params.eventEnd) qs.set('eventEnd', params.eventEnd);
   if (params.ownerId) qs.set('ownerId', params.ownerId);
   if (params.bounds) {
     qs.set('neLat', String(params.bounds.northeast.lat));
@@ -46,11 +54,18 @@ export function useFetchThingsByBounds(params: {
   searchText?: string;
   status?: string;
   type?: string;
+  priceMin?: string;
+  priceMax?: string;
+  eventStart?: string;
+  eventEnd?: string;
 }) {
-  return useQuery({
+  return useQuery<FetchThingsResponse, Error>({
     queryKey: ['things', params],
     queryFn: async () => fetchThings(params),
     enabled: !!params.bounds,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    retry: 1,
   });
 }
 
